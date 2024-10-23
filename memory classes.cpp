@@ -8,19 +8,9 @@
 #include <bitset>
 using namespace std;
 
-class MashIne {
-public:
-
-
-
-
-private:
-    vector<Memory> memory;
-    vector<Regester> regester;
-};
 class Memory {
 private:
-    char memorycells[2];
+   cell memory;
 public:
     Memory();
     void setMemory(int address, const char& value);
@@ -28,13 +18,25 @@ public:
     void clearMemory();
     void printMemory() const;
 };
-class Regester {
+class cell {
 private:
-    char regester[4];
+    char A
+    char B
 public:
-    Regester();
-    void stetRegester(int address,const char&);
-    char getRegester(int address) const;
-    void clearRegester();
-    void printRegester() const;
+    cell();
+    void setbit(char value)
+    void getcell(int pos)
 };
+    
+
+
+
+
+
+
+
+Memory::Memory(){
+    
+}
+
+
