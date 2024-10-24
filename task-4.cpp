@@ -15,7 +15,7 @@ public:
     Memory(int Size) : memory(Size, "00") {}
 
     void store(int address, const string& value) {
-        if (address >= 0 && address < 128) {
+        if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
             memory[address+1] = value.substr(2, 2);
         }
@@ -23,7 +23,7 @@ public:
 
     string load(int address) {
         string instruction;
-        if (address >= 0 && address < 128) {
+        if (address >= 0 && address < 256) {
 
             instruction= memory[address]+ memory[address+1];
             return instruction;
@@ -32,9 +32,17 @@ public:
     }
 
     void display() {
-        for (int i = 0; i < 16; ++i) {
-
-            cout << endl << memory[i] << endl;
+        int counter = 0;
+        for (int i = 0; i < 256; ++i) {
+            
+                cout << memory[i] << " ";
+                counter++;
+                if (counter == 16)
+                {
+                    cout << endl;
+                    counter = 0;
+                }
+                    
         }
     }
 };
@@ -152,6 +160,10 @@ public:
         case '5':
             Add(instr);
             break;
+        case '6':
+            Sum(instr);
+            break;
+
         case 'B':
             Jump(instr);
             break;
@@ -184,8 +196,8 @@ public:
     }
 
     void Move(const string& instr) {
-        int r = instr[1] - '0';
-        int s = instr[2] - '0';
+        int r = instr[2] - '0';
+        int s = instr[3] - '0';
         string value = registers.get(r);
         registers.set(s, value);
     }
@@ -199,7 +211,20 @@ public:
         string result = "00";
         registers.set(r, result);
     }
+    void Sum(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        string valueS = registers.get(s);
+        string valueT = registers.get(t);
+        
+        string result = to_string(stoi(valueS)+ stoi(valueT));
+        
+        if (result.length() == 1)
+            result.insert(0,"0");
 
+        registers.set(r, result);
+    }
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
