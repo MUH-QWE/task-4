@@ -179,6 +179,11 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         string value = memory.load(stoi(address, nullptr, 16));
+       value = to_string(stoi(value));
+
+        if (value.length() == 1)
+            value.insert(0, "0");
+
         registers.set(r, value);
     }
 
