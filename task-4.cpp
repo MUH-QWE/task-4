@@ -1,144 +1,220 @@
-﻿#include <iostream>
+#include <iostream>
 #include <fstream>
-#include <string>
-#include <vector>
-#include <iomanip>
 #include <sstream>
-#include <cstdlib>
-#include <bitset>
+#include <vector>
+#include <string>
+#include <algorithm>
 
 using namespace std;
 
-class Machine_Simulator {
+class Memory {
 private:
-    vector<int> registers;
-    vector<int> memory;
-    bool halted;
-    int pc;
-    string ir;
-    vector<string> program;
-    bool jump_done;
+    vector<string> memory;
 
 public:
-    Machine_Simulator() {
-        registers.resize(16, 0);
-        memory.resize(256, 0);
-        halted = false;
-        pc = 0;
-        ir = " ";
-        jump_done = false;
+    Memory(int Size) : memory(Size, "00") {}
+
+    void store(int address, const string& value) {
+        if (address >= 0 && address < 128) {
+            memory[address] = value.substr(0, 2);
+            memory[address+1] = value.substr(2, 2);
+        }
     }
 
-    void load(const string& program_data) {
-        istringstream iss(program_data);
+    string load(int address) {
         string instruction;
-        while (iss >> instruction) {
-            program.push_back(instruction);
+        if (address >= 0 && address < 128) {
+
+            instruction= memory[address]+ memory[address+1];
+            return instruction;
         }
-        pc = 0;
+        return "0000";
+    }
+
+    void display() {
+        for (int i = 0; i < 16; ++i) {
+
+            cout << endl << memory[i] << endl;
+        }
+    }
+};
+
+class Register {
+private:
+    vector<string> registers;
+
+public:
+    Register(int numRegisters) : registers(numRegisters, "00") {}
+
+    void set(int index, const string& value) {
+        if (index >= 0 && index < registers.size()) {
+            registers[index] = value;
+        }
+    }
+
+    string get(int index) {
+        if (index >= 0 && index < registers.size()) {
+            return registers[index];
+        }
+        return "00";
+    }
+
+    void display() {
+        for (const auto& reg : registers) {
+            cout << reg << endl;
+        }
+    }
+};
+
+class Loader {
+private:
+     vector<string> program;
+
+public:
+     vector<string> loadFromFile(const string& filePath) {
+        ifstream file(filePath);
+        if (!file.is_open()) {
+            cout << "Error: Unable to open file." << endl;
+            return {};
+        }
+
+        string line;
+        program.clear();
+        while (getline(file, line)) {
+            if (!line.empty()) {
+                program.push_back(line);
+            }
+        }
+
+        if (program.empty()) {
+            cout << "Error: Program is empty." << endl;
+        }
+
+        return program;
+    }
+
+     vector<string> GetInstructions() {
+        return program;
+    }
+};
+
+
+
+class MachineSimulator {
+private:
+    bool halted;
+    int pc;
+    string instruction;
+    Memory memory;
+    Register registers;
+    Loader Instructions;
+
+public:
+    MachineSimulator(int regSize, int memorySize)
+        : halted(false), pc(0), instruction("0000"), registers(regSize),memory(memorySize) {}
+
+    void load(const vector<string>& program) {
+        int address = 0;
+        for (const auto& line : program) {
+            memory.store(address, line);
+            address += 2;
+        }
     }
 
     void execute() {
-        while (pc < program.size() && !halted) {
-            string instruction = program[pc];
-            ir = instruction;
-            cout << "Executing instruction: " << instruction << endl;
-            execute_instruction(instruction);
-            if (!jump_done) {
-                pc += 2;
+        while (!halted) {
+            instruction = memory.load(pc);
+            if (instruction.empty()) {
+                cout << "Error: No instruction at PC = " << pc << endl;
+                break;
             }
-            else {
-                jump_done = false;
-            }
-        }
-        if (halted) {
-            cout << "Program halted." << endl;
+            executeInstruction(instruction);
+            pc+=2;
         }
     }
 
-    void execute_instruction(const string& instruction) {
-        if (instruction.length() != 4) {
-            cout << "Invalid instruction: " << instruction << endl;
-            return;
-        }
-        int r;
-        int address = -1;
-        char opcode = toupper(instruction[0]);
-        string operand = instruction.substr(1);
-        switch (opcode) {
-        case '1': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            address = strtol(operand.substr(1).c_str(), NULL, 16);
-            registers[r] = memory[address] & 0xFF;
+    void executeInstruction(const string& instr) {
+        char opCode = toupper(instr[0]);
+
+        switch (opCode) {
+        case '1':
+            Address_registration(instr);
             break;
-        }
-        case '2': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            int value = strtol(operand.substr(1).c_str(), NULL, 16);
-            registers[r] = value & 0xFF;
+        case '2':
+            Record_it_value(instr);
             break;
-        }
-        case '3': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            address = strtol(operand.substr(1).c_str(), NULL, 16);
-            if (address == 0) {
-                cout << "Output: " << (registers[r] & 0xFF) << endl;
-            }
-            else {
-                memory[address] = registers[r] & 0xFF;
-            }
+        case '3':
+            R_in_XY(instr);
             break;
-        }
-        case '4': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            int s = strtol(operand.substr(1, 1).c_str(), NULL, 16);
-            registers[s] = registers[r] & 0xFF;
+        case '4':
+            Move(instr);
             break;
-        }
-        case '5': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            int s = strtol(operand.substr(1, 1).c_str(), NULL, 16);
-            int t = strtol(operand.substr(2, 1).c_str(), NULL, 16);
-            registers[r] = (registers[s] + registers[t]) & 0xFF;
+        case '5':
+            Add(instr);
             break;
-        }
-        case '6': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            int s = strtol(operand.substr(1, 1).c_str(), NULL, 16);
-            int t = strtol(operand.substr(2, 1).c_str(), NULL, 16);
-            registers[r] = static_cast<int>(static_cast<float>(registers[s]) + static_cast<float>(registers[t])) & 0xFF;
+        case 'B':
+            Jump(instr);
             break;
-        }
-        case 'B': {
-            r = strtol(operand.substr(0, 1).c_str(), NULL, 16);
-            address = strtol(operand.substr(1).c_str(), NULL, 16);
-            if (registers[r] == registers[0]) {
-                pc = address;
-                jump_done = true;
-            }
-            break;
-        }
-        case 'C': {
+        case 'C':
             halted = true;
             break;
-        }
         default:
-            cout << "Invalid opcode: " << opcode << endl;
-            break;
+            cout << "Error: Unknown instruction " << instr << endl;
+        }
+    }
+
+    void Address_registration(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        string value = memory.load(stoi(address, nullptr, 16));
+        registers.set(r, value);
+    }
+
+    void Record_it_value(const string& instr) {
+        int r = instr[1] - '0';
+        string value = instr.substr(2, 2);
+        registers.set(r, value);
+    }
+
+    void R_in_XY(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        string value = registers.get(r);
+        memory.store(stoi(address, nullptr, 16), value);
+    }
+
+    void Move(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        string value = registers.get(r);
+        registers.set(s, value);
+    }
+
+    void Add(const string& instr) {
+        int r = instr[0] - '0';
+        int s = instr[1] - '0';
+        int t = instr[2] - '0';
+        string valueS = registers.get(s);
+        string valueT = registers.get(t);
+        string result = "00";
+        registers.set(r, result);
+    }
+
+    void Jump(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        if (registers.get(r) == registers.get(0)) {
+            pc = stoi(address, nullptr, 16);
         }
     }
 
     void display_state() {
-        cout << "Registers State (Binary):" << endl;
-        for (int i = 0; i < 16; i++) {
-            cout << "R" << i << ": " << bitset<8>(registers[i] & 0xFF) << endl;
-        }
-        cout << "\n(PC): " << pc << endl;
-        cout << "(IR): " << ir << endl;
-        cout << "\nMemory State:" << endl;
-        for (int i = 0; i < 256; i++) {
-            cout << i << ": " << memory[i] << endl;
-        }
+        cout << "Registers:" << endl;
+        registers.display();
+        cout << "PC: " << pc << endl;
+        cout << "IR: " << instruction << endl;
+        cout << "Memory:" << endl;
+        memory.display();
     }
 
     void run() {
@@ -155,16 +231,16 @@ public:
             switch (choice) {
             case 1: {
                 string file_path;
-                cout << "Enter the file path: ";
+                cout << "Enter the file name: ";
                 cin >> file_path;
-                ifstream file(file_path.c_str());
-                if (file.is_open()) {
-                    stringstream buffer;
-                    buffer << file.rdbuf();
-                    load(buffer.str());
+                Instructions.loadFromFile(file_path);
+
+                vector<string> instructions = Instructions.GetInstructions();
+                if (!instructions.empty()) {
+                    load(instructions);
                 }
                 else {
-                    cout << "Error: File not found." << endl;
+                    cout << "Program is empty" << endl;
                 }
                 break;
             }
@@ -184,9 +260,7 @@ public:
 };
 
 int main() {
-    Machine_Simulator simulator;
+    MachineSimulator simulator(16,256);
     simulator.run();
     return 0;
 }
-//iam here
-// LISTEN
