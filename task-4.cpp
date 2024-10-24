@@ -17,7 +17,7 @@ public:
     void store(int address, const string& value) {
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
-            memory[address+1] = value.substr(2, 2);
+            memory[address + 1] = value.substr(2, 2);
         }
     }
 
@@ -25,7 +25,7 @@ public:
         string instruction;
         if (address >= 0 && address < 256) {
 
-            instruction= memory[address]+ memory[address+1];
+            instruction = memory[address] + memory[address + 1];
             return instruction;
         }
         return "0000";
@@ -34,15 +34,15 @@ public:
     void display() {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
-            
-                cout << memory[i] << " ";
-                counter++;
-                if (counter == 16)
-                {
-                    cout << endl;
-                    counter = 0;
-                }
-                    
+
+            cout << memory[i] << " ";
+            counter++;
+            if (counter == 16)
+            {
+                cout << endl;
+                counter = 0;
+            }
+
         }
     }
 };
@@ -76,10 +76,10 @@ public:
 
 class Loader {
 private:
-     vector<string> program;
+    vector<string> program;
 
 public:
-     vector<string> loadFromFile(const string& filePath) {
+    vector<string> loadFromFile(const string& filePath) {
         ifstream file(filePath);
         if (!file.is_open()) {
             cout << "Error: Unable to open file." << endl;
@@ -101,7 +101,7 @@ public:
         return program;
     }
 
-     vector<string> GetInstructions() {
+    vector<string> GetInstructions() {
         return program;
     }
 };
@@ -119,7 +119,7 @@ private:
 
 public:
     MachineSimulator(int regSize, int memorySize)
-        : halted(false), pc(0), instruction("0000"), registers(regSize),memory(memorySize) {}
+        : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize) {}
 
     void load(const vector<string>& program) {
         int address = 0;
@@ -137,7 +137,7 @@ public:
                 break;
             }
             executeInstruction(instruction);
-            pc+=2;
+            pc += 2;
         }
     }
 
@@ -163,7 +163,6 @@ public:
         case '6':
             Sum(instr);
             break;
-
         case 'B':
             Jump(instr);
             break;
@@ -179,7 +178,7 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         string value = memory.load(stoi(address, nullptr, 16));
-       value = to_string(stoi(value));
+        value = to_string(stoi(value));
 
         if (value.length() == 1)
             value.insert(0, "0");
@@ -208,28 +207,30 @@ public:
     }
 
     void Add(const string& instr) {
-        int r = instr[0] - '0';
-        int s = instr[1] - '0';
-        int t = instr[2] - '0';
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
         string valueS = registers.get(s);
         string valueT = registers.get(t);
-        string result = "00";
+        string result = to_string(stoi(valueS) + stoi(valueT));
+        if (result.length() == 1)
+            result.insert(0, "0");
         registers.set(r, result);
     }
+
     void Sum(const string& instr) {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
         string valueS = registers.get(s);
         string valueT = registers.get(t);
-        
-        string result = to_string(stoi(valueS)+ stoi(valueT));
-        
+        string result = to_string(stoi(valueS) + stoi(valueT));
         if (result.length() == 1)
-            result.insert(0,"0");
-
+            result.insert(0, "0");
         registers.set(r, result);
     }
+
+
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
@@ -290,7 +291,7 @@ public:
 };
 
 int main() {
-    MachineSimulator simulator(16,256);
+    MachineSimulator simulator(16, 256);
     simulator.run();
     return 0;
 }
