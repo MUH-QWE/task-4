@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-
 using namespace std;
 
 class Memory {
@@ -24,7 +23,6 @@ public:
     string load(int address) {
         string instruction;
         if (address >= 0 && address < 256) {
-
             instruction = memory[address] + memory[address + 1];
             return instruction;
         }
@@ -34,15 +32,12 @@ public:
     void display() {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
-
             cout << memory[i] << " ";
             counter++;
-            if (counter == 16)
-            {
+            if (counter == 16) {
                 cout << endl;
                 counter = 0;
             }
-
         }
     }
 };
@@ -85,28 +80,34 @@ public:
             cout << "Error: Unable to open file." << endl;
             return {};
         }
-
         string line;
         program.clear();
         while (getline(file, line)) {
-            if (!line.empty()) {
+            if (!line.empty() && line.size() == 4) {
                 program.push_back(line);
             }
+            else {
+                cout << "Error: Invalid instruction in file: " << line << endl;
+            }
         }
-
         if (program.empty()) {
             cout << "Error: Program is empty." << endl;
         }
-
         return program;
+    }
+
+    void loadToMemory(Memory& memory) {
+        int address = 0;
+        for (const auto& line : program) {
+            memory.store(address, line);
+            address += 2;
+        }
     }
 
     vector<string> GetInstructions() {
         return program;
     }
 };
-
-
 
 class MachineSimulator {
 private:
@@ -121,17 +122,15 @@ public:
     MachineSimulator(int regSize, int memorySize)
         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize) {}
 
-    void load(const vector<string>& program) {
-        int address = 0;
-        for (const auto& line : program) {
-            memory.store(address, line);
-            address += 2;
-        }
+    void loadProgramFromFile(const string& filePath) {
+        Instructions.loadFromFile(filePath);
+        Instructions.loadToMemory(memory);
     }
 
     void execute() {
         while (!halted) {
             instruction = memory.load(pc);
+            cout << "PC: " << (pc / 2) << " | Instruction: " << instruction << endl;
             if (instruction.empty()) {
                 cout << "Error: No instruction at PC = " << pc << endl;
                 break;
@@ -143,7 +142,6 @@ public:
 
     void executeInstruction(const string& instr) {
         char opCode = toupper(instr[0]);
-
         switch (opCode) {
         case '1':
             Address_registration(instr);
@@ -178,13 +176,9 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         string value = memory.load(stoi(address, nullptr, 16));
-        value = to_string(stoi(value));
-
-        if (value.length() == 1)
-            value.insert(0, "0");
-
-        registers.set(r, value);
+        registers.set(r, value.substr(2, 2));
     }
+
 
     void Record_it_value(const string& instr) {
         int r = instr[1] - '0';
@@ -212,10 +206,11 @@ public:
         int t = instr[3] - '0';
         string valueS = registers.get(s);
         string valueT = registers.get(t);
-        string result = to_string(stoi(valueS) + stoi(valueT));
-        if (result.length() == 1)
-            result.insert(0, "0");
-        registers.set(r, result);
+        int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
+        if (result > 255) {
+            result = 255;
+        }
+        registers.set(r, (result < 16 ? "0" : "") + to_string(result));
     }
 
     void Sum(const string& instr) {
@@ -224,25 +219,26 @@ public:
         int t = instr[3] - '0';
         string valueS = registers.get(s);
         string valueT = registers.get(t);
-        string result = to_string(stoi(valueS) + stoi(valueT));
-        if (result.length() == 1)
-            result.insert(0, "0");
-        registers.set(r, result);
+        int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
+        if (result > 255) {
+            result = 255;
+        }
+        registers.set(r, (result < 16 ? "0" : "") + to_string(result));
     }
-
 
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) == registers.get(0)) {
             pc = stoi(address, nullptr, 16);
+            return;
         }
     }
 
     void display_state() {
         cout << "Registers:" << endl;
         registers.display();
-        cout << "PC: " << pc << endl;
+        cout << "PC: " << (pc / 2) << endl;
         cout << "IR: " << instruction << endl;
         cout << "Memory:" << endl;
         memory.display();
@@ -258,21 +254,12 @@ public:
             cout << "Choose: ";
             int choice;
             cin >> choice;
-
             switch (choice) {
             case 1: {
                 string file_path;
                 cout << "Enter the file name: ";
                 cin >> file_path;
-                Instructions.loadFromFile(file_path);
-
-                vector<string> instructions = Instructions.GetInstructions();
-                if (!instructions.empty()) {
-                    load(instructions);
-                }
-                else {
-                    cout << "Program is empty" << endl;
-                }
+                loadProgramFromFile(file_path);
                 break;
             }
             case 2:
