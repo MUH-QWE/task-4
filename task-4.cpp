@@ -77,21 +77,21 @@ public:
     vector<string> loadFromFile(const string& filePath) {
         ifstream file(filePath);
         if (!file.is_open()) {
-            cout << "Error: Unable to open file." << endl;
+            cout << "Unable to open file." << endl;
             return {};
         }
         string line;
         program.clear();
         while (getline(file, line)) {
-            if (!line.empty() && line.size() == 4) {
+            if (line.size() == 4 && all_of(line.begin(), line.end(), ::isxdigit)) {
                 program.push_back(line);
             }
             else {
-                cout << "Error: Invalid instruction in file: " << line << endl;
+                cout << "Invalid instruction in file: " << line << endl;
             }
         }
         if (program.empty()) {
-            cout << "Error: Program is empty." << endl;
+            cout << "Program is empty." << endl;
         }
         return program;
     }
@@ -99,8 +99,15 @@ public:
     void loadToMemory(Memory& memory) {
         int address = 0;
         for (const auto& line : program) {
-            memory.store(address, line);
-            address += 2;
+            if (line.size() == 4 && all_of(line.begin(), line.end(), ::isxdigit) &&
+                (line[0] == '1' || line[0] == '2' || line[0] == '3' || line[0] == '4' ||
+                    line[0] == '5' || line[0] == '6' || line[0] == 'B' || line[0] == 'C' || line[0] == 'b' || line[0] == 'c')) {
+                memory.store(address, line);
+                address += 2;
+            }
+            else {
+                cout << "ignoring : " << line << endl;
+            }
         }
     }
 
@@ -132,7 +139,7 @@ public:
             instruction = memory.load(pc);
             cout << "PC: " << (pc / 2) << " | Instruction: " << instruction << endl;
             if (instruction.empty()) {
-                cout << "Error: No instruction at PC = " << pc << endl;
+                cout << "No instruction at PC = " << pc << endl;
                 break;
             }
             executeInstruction(instruction);
@@ -168,7 +175,7 @@ public:
             halted = true;
             break;
         default:
-            cout << "Error: Unknown instruction " << instr << endl;
+            cout << "Unknown instruction " << instr << endl;
         }
     }
 
@@ -178,7 +185,6 @@ public:
         string value = memory.load(stoi(address, nullptr, 16));
         registers.set(r, value.substr(2, 2));
     }
-
 
     void Record_it_value(const string& instr) {
         int r = instr[1] - '0';
@@ -271,7 +277,7 @@ public:
             case 4:
                 return;
             default:
-                cout << "Error: Invalid choice." << endl;
+                cout << "Invalid choice." << endl;
             }
         }
     }
