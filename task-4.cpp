@@ -83,17 +83,21 @@ public:
     vector<string> loadfile(const string& filePath) {
         ifstream file(filePath);
         if (!file.is_open()) {
-            cout << "Unable open file." << endl;
+            cout << "Unable to open file." << endl;
             return {};
         }
         string line;
         program.clear();
         while (getline(file, line)) {
-            if (line.size() == 4 && all_of(line.begin(), line.end(), ::isxdigit)) {
-                program.push_back(line);
-            }
-            else {
-                cout << "Invalid file: " << line << endl;
+            istringstream iss(line);
+            string instruction;
+            while (iss >> instruction) {
+                if (instruction.size() == 4 && all_of(instruction.begin(), instruction.end(), ::isxdigit)) {
+                    program.push_back(instruction);
+                }
+                else {
+                    cout << "Invalid instruction: " << instruction << endl;
+                }
             }
         }
         if (program.empty()) {
@@ -104,17 +108,19 @@ public:
 
     void load_to_memory(Memory& memory) {
         int address = 0;
-        for (const auto& line : program) {
-            if (line.size() == 4 && all_of(line.begin(), line.end(), ::isxdigit) &&
-                (line[0] == '1' || line[0] == '2' || line[0] == '3' || line[0] == '4' ||
-                    line[0] == '5' || line[0] == '6' || line[0] == 'B' || line[0] == 'C' 
-                    || line[0] == 'b' || line[0] == 'c')) {
-                memory.store(address, line);
+        for (const auto& instr : program) {
+            if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
+                memory.store(address, instr);
                 address += 2;
             }
             else {
-                cout << "ignoring : " << line << endl;}
-    }
+                cout << "Ignoring: " << instr << endl;
+            }
+        }
+        if (find(program.begin(), program.end(), "C000") == program.end()) {
+            program.push_back("C000");
+            memory.store(address, "C000");
+        }
     }
 
     vector<string> getInstructions() {
@@ -122,73 +128,23 @@ public:
     }
 };
 
-class Machine {
+class CPU {
 private:
-    bool halted;
-    int pc;
-    string instruction;
-    Memory memory;
-    Register registers;
-    Loader Instructions;
+    Memory& memory;
+    Register& registers;
+    int& pc;
 
 public:
-    Machine(int regSize, int memorySize)
-        : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize) {}
-
-    void load_programe_file(const string& filePath) {
-        Instructions.loadfile(filePath);
-        Instructions.load_to_memory(memory);
-    }
-
-    void execute() {
-        while (!halted) {
-            instruction = memory.load(pc);
-            cout << "PC: " << (pc / 2) << " | Instruction: " << instruction << endl;
-            if (instruction.empty()) {
-                cout << "No instruction at PC = " << pc << endl;
-                break;
-            }
-            execute_instruction(instruction);
-            pc += 2;
-        }
-    }
-
-    void execute_instruction(const string& instr) {
-        char opCode = toupper(instr[0]);
-        switch (opCode) {
-        case '1':
-            Address(instr);
-            break;
-        case '2':
-            Record_value(instr);
-            break;
-        case '3':
-            cope(instr);
-            break;
-        case '4':
-            Move(instr);
-            break;
-        case '5':
-            Add(instr);
-            break;
-        case '6':
-            Sum(instr);
-            break;
-        case 'B':
-            Jump(instr);
-            break;
-        case 'C':
-            halted = true;
-            break;
-        default:
-            cout << "error instruction " << instr << endl;
-        }
-    }
+    CPU(Memory& mem, Register& regs, int& programCounter)
+        : memory(mem), registers(regs), pc(programCounter) {}
 
     void Address(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
-        string value = memory.load(stoi(address, nullptr, 16));
+        int addr = stoi(address, nullptr, 16);
+        if (addr < 0 || addr >= 256) return;
+        string value = memory.load(addr);
+        if (value.empty()) return;
         registers.set(r, value.substr(2, 2));
     }
 
@@ -216,12 +172,10 @@ public:
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
-        string valueS = registers.get(s);
-        string valueT = registers.get(t);
-        int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
-        if (result > 255) {
-            result = 255;
-        }
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result = valueS + valueT;
+        if (result > 255) result = 255;
         registers.set(r, (result < 16 ? "0" : "") + to_string(result));
     }
 
@@ -232,9 +186,7 @@ public:
         string valueS = registers.get(s);
         string valueT = registers.get(t);
         int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
-        if (result > 255) {
-            result = 255;
-        }
+        if (result > 255) result = 255;
         registers.set(r, (result < 16 ? "0" : "") + to_string(result));
     }
 
@@ -244,6 +196,72 @@ public:
         if (registers.get(r) == registers.get(0)) {
             pc = stoi(address, nullptr, 16);
             return;
+        }
+    }
+};
+
+class Machine {
+private:
+    bool halted;
+    int pc;
+    string instruction;
+    Memory memory;
+    Register registers;
+    Loader loader;
+    CPU cpu;
+
+public:
+    Machine(int regSize, int memorySize)
+        : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
+        loader(), cpu(memory, registers, pc) {}
+
+    void load_program_file(const string& filePath) {
+        loader.loadfile(filePath);
+        loader.load_to_memory(memory);
+    }
+
+    void execute() {
+        while (!halted) {
+            instruction = memory.load(pc);
+            cout << "PC: " << (pc / 2) << " | Instruction: " << instruction << endl;
+            if (instruction.empty()) {
+                cout << "No instruction at PC = " << pc << endl;
+                break;
+            }
+            execute_instruction(instruction);
+            pc += 2;
+        }
+    }
+
+    void execute_instruction(const string& instr) {
+        char opCode = toupper(instr[0]);
+        switch (opCode) {
+        case '1':
+            cpu.Address(instr);
+            break;
+        case '2':
+            cpu.Record_value(instr);
+            break;
+        case '3':
+            cpu.cope(instr);
+            break;
+        case '4':
+            cpu.Move(instr);
+            break;
+        case '5':
+            cpu.Add(instr);
+            break;
+        case '6':
+            cpu.Sum(instr);
+            break;
+        case 'B':
+            cpu.Jump(instr);
+            break;
+        case 'C':
+            halted = true;
+            break;
+        default:
+            cout << "error instruction " << instr << endl;
         }
     }
 
@@ -256,8 +274,8 @@ public:
         memory.display();
     }
 
-    void run() {
-        while (true) {
+ void run() {
+     while (true) {
             cout << "Menu:" << endl;
             cout << "1-Load file" << endl;
             cout << "2-Execute" << endl;
@@ -266,12 +284,12 @@ public:
             cout << "Choose: ";
             int choice;
             cin >> choice;
-            switch (choice) {
+     switch (choice) {
             case 1: {
                 string file_path;
                 cout << "file name: ";
                 cin >> file_path;
-                load_programe_file(file_path);
+                load_program_file(file_path);
                 break;
             }
             case 2:
@@ -288,9 +306,9 @@ public:
         }
     }
 };
-
 int main() {
-    Machine simulator(16, 256);
-    simulator.run();
+    Machine machine(16, 256);
+    machine.run();
     return 0;
 }
+
