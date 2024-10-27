@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <iomanip>
 using namespace std;
 
 class Memory {
@@ -16,7 +17,12 @@ public:
     void store(int address, const string& value) {
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
-            memory[address + 1] = value.substr(2, 2);
+            if (value.length() > 2) {
+                memory[address + 1] = value.substr(2, 2);
+            }
+            else {
+                memory[address + 1] = "00";
+            }
         }
     }
 
@@ -32,7 +38,7 @@ public:
     void display() {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
-            cout << memory[i] << " ";
+            cout << setw(2) << setfill('0') << memory[i] << " ";
             counter++;
             if (counter == 16) {
                 cout << endl;
@@ -74,10 +80,10 @@ private:
     vector<string> program;
 
 public:
-    vector<string> loadFromFile(const string& filePath) {
+    vector<string> loadfile(const string& filePath) {
         ifstream file(filePath);
         if (!file.is_open()) {
-            cout << "Unable to open file." << endl;
+            cout << "Unable open file." << endl;
             return {};
         }
         string line;
@@ -87,7 +93,7 @@ public:
                 program.push_back(line);
             }
             else {
-                cout << "Invalid instruction in file: " << line << endl;
+                cout << "Invalid file: " << line << endl;
             }
         }
         if (program.empty()) {
@@ -96,27 +102,27 @@ public:
         return program;
     }
 
-    void loadToMemory(Memory& memory) {
+    void load_to_memory(Memory& memory) {
         int address = 0;
         for (const auto& line : program) {
             if (line.size() == 4 && all_of(line.begin(), line.end(), ::isxdigit) &&
                 (line[0] == '1' || line[0] == '2' || line[0] == '3' || line[0] == '4' ||
-                    line[0] == '5' || line[0] == '6' || line[0] == 'B' || line[0] == 'C' || line[0] == 'b' || line[0] == 'c')) {
+                    line[0] == '5' || line[0] == '6' || line[0] == 'B' || line[0] == 'C' 
+                    || line[0] == 'b' || line[0] == 'c')) {
                 memory.store(address, line);
                 address += 2;
             }
             else {
-                cout << "ignoring : " << line << endl;
-            }
-        }
+                cout << "ignoring : " << line << endl;}
+    }
     }
 
-    vector<string> GetInstructions() {
+    vector<string> getInstructions() {
         return program;
     }
 };
 
-class MachineSimulator {
+class Machine {
 private:
     bool halted;
     int pc;
@@ -126,12 +132,12 @@ private:
     Loader Instructions;
 
 public:
-    MachineSimulator(int regSize, int memorySize)
+    Machine(int regSize, int memorySize)
         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize) {}
 
-    void loadProgramFromFile(const string& filePath) {
-        Instructions.loadFromFile(filePath);
-        Instructions.loadToMemory(memory);
+    void load_programe_file(const string& filePath) {
+        Instructions.loadfile(filePath);
+        Instructions.load_to_memory(memory);
     }
 
     void execute() {
@@ -142,22 +148,22 @@ public:
                 cout << "No instruction at PC = " << pc << endl;
                 break;
             }
-            executeInstruction(instruction);
+            execute_instruction(instruction);
             pc += 2;
         }
     }
 
-    void executeInstruction(const string& instr) {
+    void execute_instruction(const string& instr) {
         char opCode = toupper(instr[0]);
         switch (opCode) {
         case '1':
-            Address_registration(instr);
+            Address(instr);
             break;
         case '2':
-            Record_it_value(instr);
+            Record_value(instr);
             break;
         case '3':
-            R_in_XY(instr);
+            cope(instr);
             break;
         case '4':
             Move(instr);
@@ -175,24 +181,24 @@ public:
             halted = true;
             break;
         default:
-            cout << "Unknown instruction " << instr << endl;
+            cout << "error instruction " << instr << endl;
         }
     }
 
-    void Address_registration(const string& instr) {
+    void Address(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         string value = memory.load(stoi(address, nullptr, 16));
         registers.set(r, value.substr(2, 2));
     }
 
-    void Record_it_value(const string& instr) {
+    void Record_value(const string& instr) {
         int r = instr[1] - '0';
         string value = instr.substr(2, 2);
         registers.set(r, value);
     }
 
-    void R_in_XY(const string& instr) {
+    void cope(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         string value = registers.get(r);
@@ -253,9 +259,9 @@ public:
     void run() {
         while (true) {
             cout << "Menu:" << endl;
-            cout << "1-Load program from file" << endl;
-            cout << "2-Execute program" << endl;
-            cout << "3-Display state" << endl;
+            cout << "1-Load file" << endl;
+            cout << "2-Execute" << endl;
+            cout << "3-Display" << endl;
             cout << "4-Exit" << endl;
             cout << "Choose: ";
             int choice;
@@ -263,9 +269,9 @@ public:
             switch (choice) {
             case 1: {
                 string file_path;
-                cout << "Enter the file name: ";
+                cout << "file name: ";
                 cin >> file_path;
-                loadProgramFromFile(file_path);
+                load_programe_file(file_path);
                 break;
             }
             case 2:
@@ -284,7 +290,7 @@ public:
 };
 
 int main() {
-    MachineSimulator simulator(16, 256);
+    Machine simulator(16, 256);
     simulator.run();
     return 0;
 }
