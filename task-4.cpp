@@ -32,6 +32,9 @@ public:
             instruction = memory[address] + memory[address + 1];
             return instruction;
         }
+        if (address < 0 && address >= 256) {
+            return "00";
+        }
         return "0000";
     }
 
@@ -123,10 +126,79 @@ public:
         }
     }
 
+    void cleanlineloop(const string& file_path) {
+        string line;
+        ifstream file(file_path);
+        while (getline(file, line)) {
+            cleanline(line, string("Work.txt"));
+        }
+    }
+
+    void cleanline(const string& line, string outs1) {
+        ofstream outs(outs1);
+        vector<char> import;
+        int count = 0;
+        vector<char> nimport;
+        for (char ch : line) {
+            if ((!(import.size() == 4)) && count != 0) {
+                return;
+            }
+            if (isspace(ch) && import.size() != 0)
+                count++;
+            if (!isspace(ch)) {
+        import.push_back(ch);
+                if (import.size() > 4 && count != 0) {
+                    count = 0;
+                    for (size_t i = 0; i < import.size() - 1; ++i) {
+                        nimport.push_back(toupper(import[i]));
+                    }
+        import.erase(import.begin(), import.end() - 1);
+                }
+            }
+        }
+        if (import.size() == 4)
+            for (size_t i = 0; i < import.size(); ++i)
+                nimport.push_back(toupper(import[i]));
+        for (size_t i = 0; i < nimport.size();) {
+            if (nimport[i] == 'C')
+                if (nimport[i + 1] == '0' && nimport[i + 2] == '0' && nimport[3] == '0') {
+                    for (; i < nimport.size(); i++)
+                        outs << nimport[i];
+                    return;
+                }
+                else {
+                    return;
+                }
+            if (!isValidnotFirstChar(nimport[i])) {
+                if ((!isvalidnotrestchars(nimport[i + 1])) && (!isvalidnotrestchars(nimport[i + 2])) &&
+                    (!isvalidnotrestchars(nimport[i + 3]))) {
+                    for (; i < 4; i++)
+                        outs << nimport[i];
+                    i -= 4;
+                    outs << endl;
+                }
+                else
+                    return;
+            }
+            else
+                return;
+            nimport.erase(nimport.begin(), nimport.begin() + 4);
+        }
+    }
+
     vector<string> getInstructions() {
         return program;
     }
+
+    bool isValidnotFirstChar(char ch) {
+        return isxdigit(ch);
+    }
+
+    bool isvalidnotrestchars(char ch) {
+        return isxdigit(ch);
+    }
 };
+
 
 class CPU {
 private:
@@ -142,16 +214,27 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         int addr = stoi(address, nullptr, 16);
-        if (addr < 0 || addr >= 256) return;
+        if (addr < 0 || addr >= 256) {
+            registers.set(r, "00");
+            return;
+        }
         string value = memory.load(addr);
-        if (value.empty()) return;
+        if (value.empty()) {
+            registers.set(r, "00");
+            return;
+        }
         registers.set(r, value.substr(2, 2));
     }
 
     void Record_value(const string& instr) {
         int r = instr[1] - '0';
         string value = instr.substr(2, 2);
-        registers.set(r, value);
+        if (value == "00") {
+            registers.set(r, "00");
+        }
+        else {
+            registers.set(r, value);
+        }
     }
 
     void cope(const string& instr) {
@@ -274,8 +357,8 @@ public:
         memory.display();
     }
 
- void run() {
-     while (true) {
+    void run() {
+        while (true) {
             cout << "Menu:" << endl;
             cout << "1-Load file" << endl;
             cout << "2-Execute" << endl;
@@ -284,7 +367,7 @@ public:
             cout << "Choose: ";
             int choice;
             cin >> choice;
-     switch (choice) {
+            switch (choice) {
             case 1: {
                 string file_path;
                 cout << "file name: ";
@@ -306,9 +389,9 @@ public:
         }
     }
 };
+
 int main() {
     Machine machine(16, 256);
     machine.run();
     return 0;
 }
-
