@@ -273,12 +273,54 @@ public:
         registers.set(r, (result < 16 ? "0" : "") + to_string(result));
     }
 
+    void AND(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_AND = valueS & valueT;
+        if (result_AND > 255) result_AND = 255;
+        registers.set(r, (result_AND < 16 ? "0" : "") + to_string(result_AND));
+    }
+
+    void XOR(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_XOR = (valueS ^ valueT);
+        if (result_XOR > 255) result_XOR = 255;
+        registers.set(r, (result_XOR < 16 ? "0" : "") + to_string(result_XOR));
+    }
+
+    void OR(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_OR = (valueS | valueT);
+        if (result_OR > 255) result_OR = 255;
+        registers.set(r, (result_OR < 16 ? "0" : "") + to_string(result_OR));
+}
+
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) == registers.get(0)) {
             pc = stoi(address, nullptr, 16);
             return;
+        }
+    }
+
+    void Greater(const string& instr) {
+    int r = instr[1] - '0';
+    string address = instr.substr(2, 2);
+    if (registers.get(r) > registers.get(0)) {
+        pc = stoi(address, nullptr, 16);
+        return;
         }
     }
 };
@@ -337,8 +379,20 @@ public:
         case '6':
             cpu.Sum(instr);
             break;
+        case '7':
+            cpu.OR(instr);
+            break;
+        case '8':
+            cpu.AND(instr);
+            break;
+        case '9':
+            cpu.XOR(instr);
+            break;
         case 'B':
             cpu.Jump(instr);
+            break;
+        case 'D':
+            cpu.Greater(instr);
             break;
         case 'C':
             halted = true;
