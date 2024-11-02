@@ -412,7 +412,7 @@ public:
         case '9':
             cpu.XOR(instr);
             break;
-            case 'A':
+        case 'A':
             cu.Rotate(instr);
             break;
         case 'B':
@@ -421,9 +421,11 @@ public:
         case 'C':
             halted = true;
             break;
-            
+        case 'D':
+            cpu.Greater(instr);
+            break;    
         default:
-            cout << "Error: Unknown instruction " << instr << endl;
+            cout << "error: Unknown instruction " << instr << endl;
         }
     }
     
