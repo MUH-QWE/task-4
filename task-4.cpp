@@ -286,16 +286,95 @@ public:
 
     }
 
-    void Sum_floating(const string& instr) {
+    bitset<4> binarydouble(float num) {
+        int count = 0;
+        while (num > .025) {
+            num -= .025;
+            count += 1;
+        }
+        while (count % 10 != 0) {
+            count++;
+        }
+        count /= 10;
+        bitset<4> ret = count;
+        return ret;
+    }
+    string sumdouble(string Dfir, string Dsec) {
+        bitset<8> Df = stoi(Dfir, nullptr, 16);
+        int sign1 = (Df[7] == '1') ? -1 : 1;
+        string moved1 = Df.to_string();
+        int move1 = stoi(moved1.substr(1, 3), nullptr, 2) - 4;
+        bitset<4> four1 = (Df << 4).to_ulong();
+        double mantissa1 = 0.0;
+        for (int i = 0; i < moved1.substr(4, 7).length(); ++i)
+            if (moved1.substr(4, 7)[i] == '1')
+                mantissa1 += pow(2, -(i + 1));
+        double value1 = sign1 * mantissa1 * pow(2, move1);
+        bitset<8> Ds = stoul(Dsec, nullptr, 16);
+        int sign2 = (Ds[7]) ? -1 : 1;
+        string moved2 = Ds.to_string();
+        int move2 = stoi(moved2.substr(1, 3), nullptr, 2) - 4;
+        bitset<4> four2 = (Ds << 4).to_ulong();
+        double mantissa2 = 0.0;
+        for (int i = 0; i < moved2.substr(4, 7).length(); ++i)
+            if (moved2.substr(4, 7)[i] == '1')
+                mantissa2 += pow(2, -(i + 1));
+        double value2 = sign2 * mantissa2 * pow(2, move2);
+        double result = value1 + value2;
+        string sign3 = "0";
+        string final;
+        if (result < 0) {
+            sign3 = "1";
+            result *= -1;
+        }
+        if (result < 1) {
+            bitset<4> res = binarydouble(result);
+            int i = 0;
+            while (res[3] != 1) {
+                res = res << 1;
+                i++;
+            }
+            bitset<3> idi = i;
+            final = sign3 + idi.to_string() + res.to_string();
+        }
+        else {
+            double fraction = result - floor(result);
+            int importnum = result;
+            bitset<4> res2 = binarydouble(fraction);
+            bitset<4> res1 = importnum;
+            int index = 4;
+            for (int i = 3; i > 0; i--)
+                if (res1[i] == 1) {
+                    index = 1 + i;
+                }
+            index += 4;
+            while (res1[3] != 1)
+                res1 = res1 << 1;
+            int i = 0;
+            while (res1[i] != 1) {
+                if (res2[3] == 1) {
+                    res1[0] = 1;
+                    res2 = res2 << 1;
+                }
+                i++;
+            }
+            bitset<3> idi = index;
+            final = sign3 + idi.to_string() + res1.to_string();
+        }
+        int finaly = bitset<32>(final).to_ulong();
+        stringstream ss;
+        ss << hex << finaly;
+        return ss.str();
+    }
+    void sum_floating(string instr)
+    {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
-        string valueS = registers.get(s);
-        string valueT = registers.get(t);
-        int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
-        if (result > 255) result = 255;
-        string string_result = IntegerToHexa(result);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+        string ValueS = registers.get(s);
+        string ValueT = registers.get(t);
+        string result = sumdouble(ValueS, ValueT);
+        registers.set(r, result);
     }
 
     void AND(const string& instr) {
@@ -408,7 +487,7 @@ public:
             cu.sum_towscomplement(instr);
             break;
         case '6':
-            cu.Sum_floating(instr);
+            cu.sum_floating(instr);
             break;
         case '7':
             cu.OR(instr);
