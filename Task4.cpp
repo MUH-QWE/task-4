@@ -203,8 +203,14 @@ public:
         int s = instr[2] - '0';
         int t = instr[3] - '0';
         int valueS = stoi(registers.get(s), nullptr, 16);
+        if (valueS > 127)
+            valueS -= 256;
         int valueT = stoi(registers.get(t), nullptr, 16);
-        int result = valueS + valueT;
+        if (valueT > 127)
+            valueT -= 256;
+        int result = (valueS + valueT);
+        if (result < 0)
+            valueT += 256;
         if (result > 255) result = 255;
         registers.set(r, (result < 16 ? "0" : "") + to_string(result));
     }
