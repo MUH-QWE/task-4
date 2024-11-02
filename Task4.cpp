@@ -18,7 +18,7 @@ public:
     void store(int address, const string& value) {
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
-            memory[address+1] = value.substr(2, 2);
+            memory[address + 1] = value.substr(2, 2);
         }
     }
     void load_to_memory(vector <string> Instructions) {
@@ -31,12 +31,12 @@ public:
         }
 
     }
-    
+
     string load(int address) {
         string instruction;
         if (address >= 0 && address < 256) {
 
-            instruction= memory[address]+ memory[address+1];
+            instruction = memory[address] + memory[address + 1];
             return instruction;
         }
         return "0000";
@@ -45,14 +45,14 @@ public:
     void display() {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
-            
+
             cout << setw(2) << setfill('0') << memory[i] << " ";
-                counter++;
-                if (counter == 16)
-                {
-                    cout << endl;
-                    counter = 0;
-            }     
+            counter++;
+            if (counter == 16)
+            {
+                cout << endl;
+                counter = 0;
+            }
         }
     }
 };
@@ -86,7 +86,7 @@ public:
 
 class Loader {
 private:
-     vector<string> Instructions;
+    vector<string> Instructions;
 
 public:
     string Trim(string text) {
@@ -118,17 +118,17 @@ public:
         while (getline(file, line)) {
             if (!line.empty()) {
 
-                line= Trim(line);
+                line = Trim(line);
                 line += ' ';
-                while (line.length() >=4)
+                while (line.length() >= 4)
                 {
                     line[0] = toupper(line[0]);
-                    Instructions.push_back(line.substr(0,line.find_first_of(' ')));
-                    line=line.erase(0, line.find_first_of(' ')+1);
+                    Instructions.push_back(line.substr(0, line.find_first_of(' ')));
+                    line = line.erase(0, line.find_first_of(' ') + 1);
                     line = Trim(line);
                     line += ' ';
                 }
-                }
+            }
         }
         if (Instructions[Instructions.size() - 1] != "C000")
             Instructions.push_back("C000");
@@ -140,7 +140,7 @@ public:
         return Instructions;
     }
 
-     vector<string> GetInstructions() {
+    vector<string> GetInstructions() {
         return Instructions;
     }
 };
@@ -195,7 +195,7 @@ public:
         string value = registers.get(r);
         registers.set(s, value);
     }
-    string hexToBinary( string& hex) {
+    string hexToBinary(string& hex) {
         string binary;
 
         if (hex[0] == '0')
@@ -213,13 +213,13 @@ public:
             else if (hexDigit >= 'a' && hexDigit <= 'f') {
                 decimalValue = hexDigit - 'a' + 10;
             }
-            
-            binary += std::bitset<4>(decimalValue).to_string();
+
+            binary += bitset<4> (decimalValue).to_string();
         }
 
         return binary;
     }
-    string binaryToHex(const string& binaryStr) 
+    string binaryToHex(const string& binaryStr)
     {
         string paddedBinary = binaryStr;
         while (paddedBinary.length() % 4 != 0) {
@@ -227,9 +227,9 @@ public:
         }
         stringstream hexStream;
         for (size_t i = 0; i < paddedBinary.length(); i += 4) {
-            std::string fourBits = paddedBinary.substr(i, 4);
-            int decimalValue = std::bitset<4>(fourBits).to_ulong();
-            hexStream << std::hex << decimalValue;
+            string fourBits = paddedBinary.substr(i, 4);
+            int decimalValue = bitset<4>(fourBits).to_ulong();
+            hexStream << hex << decimalValue;
         }
         string hexResult = hexStream.str();
         for (char& c : hexResult) c = toupper(c);
@@ -243,22 +243,22 @@ public:
         for (size_t i = 0; i < stoi(no_rotate); i++)
         {
             char c = value[value.length() - 1];
-            value= value.insert(0,1,c);
-            value=value.erase(value.length() - 1, 1);
+            value = value.insert(0, 1, c);
+            value = value.erase(value.length() - 1, 1);
         }
         value = binaryToHex(value);
 
         if (value.length() == 1)
-            value= value.insert(0, 1, '0');
-        
+            value = value.insert(0, 1, '0');
+
         registers.set(r, value);
     }
     string IntegerToHexa(int value)
     {
         stringstream result;
-        result<< hex << value;
+        result << hex << value;
         string HexaResult = result.str();
-        
+
         for (char& c : HexaResult) c = toupper(c);
         return HexaResult;
     }
@@ -278,7 +278,7 @@ public:
             valueT += 256;
         if (result > 255) result = 255;
         string string_result = IntegerToHexa(result);
-        registers.set(r, (string_result.length()==1 ? "0"   : "") + string_result);
+        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
 
     }
 
@@ -315,7 +315,7 @@ public:
         int result_XOR = (valueS ^ valueT);
         if (result_XOR > 255) result_XOR = 255;
         string string_result = IntegerToHexa(result_XOR);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+        registers.set(r, (string_result.length() ^ 1 ? "0" : "") + string_result);
     }
 
     void OR(const string& instr) {
@@ -331,21 +331,23 @@ public:
     }
 
     void Jump(const string& instr) {
-        int r = instr[1] - '0';
+        int r = instr[1] - '0'; 
         string address = instr.substr(2, 2);
-        if (registers.get(r) == registers.get(0)) {
-            pc = stoi(address, nullptr, 16);
-            return;
-        }
+        int targetAddress;
+        try {targetAddress = stoi(address, nullptr, 16);}
+        catch (const invalid_argument&) {return;}
+        if (registers.get(r) == registers.get(0)) {pc = targetAddress;}
     }
+
+
 
     void Greater(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
-        if (registers.get(r) > registers.get(0)) {
-            pc = stoi(address, nullptr, 16);
-            return;
-        }
+        int targetAddress;
+        try { targetAddress = stoi(address, nullptr, 16); }
+        catch (const invalid_argument&) { return; }
+        if (registers.get(r) > registers.get(0)) { pc = targetAddress; }
     }
 };
 
@@ -361,7 +363,7 @@ private:
     CU cu;
 public:
     MachineSimulator(int regSize, int memorySize)
-         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
+        : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
         Instructions(), cu(memory, registers, pc) {}
 
     void load(const vector<string>& program) {
@@ -380,7 +382,7 @@ public:
                 break;
             }
             executeInstruction(instruction);
-            pc+=2;
+            pc += 2;
         }
     }
 
@@ -407,13 +409,13 @@ public:
             cu.Sum_floating(instr);
             break;
         case '7':
-            cpu.OR(instr);
+            cu.OR(instr);
             break;
         case '8':
-            cpu.AND(instr);
+            cu.AND(instr);
             break;
         case '9':
-            cpu.XOR(instr);
+            cu.XOR(instr);
             break;
         case 'A':
             cu.Rotate(instr);
@@ -425,13 +427,13 @@ public:
             halted = true;
             break;
         case 'D':
-            cpu.Greater(instr);
-            break;    
+            cu.Greater(instr);
+            break;
         default:
             cout << "error: Unknown instruction " << instr << endl;
         }
     }
-    
+
     void display_state() {
         cout << "Registers:" << endl;
         registers.display();
@@ -502,7 +504,7 @@ public:
 };
 
 int main() {
-    MachineSimulator simulator(16,256);
+    MachineSimulator simulator(16, 256);
     simulator.run();
     return 0;
 }
