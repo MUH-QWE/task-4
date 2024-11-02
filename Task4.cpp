@@ -302,7 +302,8 @@ public:
         int valueT = stoi(registers.get(t), nullptr, 16);
         int result_AND = valueS & valueT;
         if (result_AND > 255) result_AND = 255;
-        registers.set(r, (result_AND < 16 ? "0" : "") + to_string(result_AND));
+        string string_result = IntegerToHexa(result_AND);
+        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
     }
 
     void XOR(const string& instr) {
@@ -313,7 +314,8 @@ public:
         int valueT = stoi(registers.get(t), nullptr, 16);
         int result_XOR = (valueS ^ valueT);
         if (result_XOR > 255) result_XOR = 255;
-        registers.set(r, (result_XOR < 16 ? "0" : "") + to_string(result_XOR));
+        string string_result = IntegerToHexa(result_XOR);
+        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
     }
 
     void OR(const string& instr) {
@@ -324,7 +326,8 @@ public:
         int valueT = stoi(registers.get(t), nullptr, 16);
         int result_OR = (valueS | valueT);
         if (result_OR > 255) result_OR = 255;
-        registers.set(r, (result_OR < 16 ? "0" : "") + to_string(result_OR));
+        string string_result = IntegerToHexa(result_OR);
+        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
     }
 
     void Jump(const string& instr) {
