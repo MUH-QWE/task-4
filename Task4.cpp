@@ -403,16 +403,25 @@ public:
         case '6':
             cu.Sum_floating(instr);
             break;
-
+        case '7':
+            cpu.OR(instr);
+            break;
+        case '8':
+            cpu.AND(instr);
+            break;
+        case '9':
+            cpu.XOR(instr);
+            break;
+            case 'A':
+            cu.Rotate(instr);
+            break;
         case 'B':
             cu.Jump(instr);
-            break;
-        case 'A':
-            cu.Rotate(instr);
             break;
         case 'C':
             halted = true;
             break;
+            
         default:
             cout << "Error: Unknown instruction " << instr << endl;
         }
