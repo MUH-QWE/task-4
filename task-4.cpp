@@ -18,23 +18,26 @@ public:
     void store(int address, const string& value) {
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
-            if (value.length() > 2) {
-                memory[address + 1] = value.substr(2, 2);
-            }
-            else {
-                memory[address + 1] = "00";
+            memory[address + 1] = value.substr(2, 2);
+        }
+    }
+    void load_to_memory(vector <string> Instructions) {
+        int address = 0;
+        for (const auto& instr : Instructions) {
+            if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
+                store(address, instr);
+                address += 2;
             }
         }
+
     }
 
     string load(int address) {
         string instruction;
         if (address >= 0 && address < 256) {
+
             instruction = memory[address] + memory[address + 1];
             return instruction;
-        }
-        if (address < 0 && address >= 256) {
-            return "00";
         }
         return "0000";
     }
@@ -42,12 +45,15 @@ public:
     void display() {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
+
             cout << setw(2) << setfill('0') << memory[i] << " ";
             counter++;
-            if (counter == 16) {
+            if (counter == 16)
+            {
                 cout << endl;
                 counter = 0;
             }
+
         }
     }
 };
@@ -81,134 +87,73 @@ public:
 
 class Loader {
 private:
-    vector<string> program;
+    vector<string> Instructions;
 
 public:
-    vector<string> loadfile(const string& filePath) {
+    string Trim(string text) {
+        if (text.length() == 0)
+            return "";
+
+        size_t start = 0;
+        while (start < text.size() && text[start] == ' ') {
+            start++;
+        }
+
+        size_t end = text.size() - 1;
+        while (end > start && text[end] == ' ') {
+            end--;
+        }
+
+        return text.substr(start, end - start + 1);
+    }
+
+    vector<string> loadFromFile(const string& filePath) {
         ifstream file(filePath);
         if (!file.is_open()) {
-            cout << "Unable to open file." << endl;
+            cout << "Error: Unable to open file." << endl;
             return {};
         }
+
         string line;
-        program.clear();
+        Instructions.clear();
         while (getline(file, line)) {
-            istringstream iss(line);
-            string instruction;
-            while (iss >> instruction) {
-                if (instruction.size() == 4 && all_of(instruction.begin(), instruction.end(), ::isxdigit)) {
-                    program.push_back(instruction);
-                }
-                else {
-                    cout << "Invalid instruction: " << instruction << endl;
-                }
-            }
-        }
-        if (program.empty()) {
-            cout << "Program is empty." << endl;
-        }
-        return program;
-    }
+            if (!line.empty()) {
 
-    void load_to_memory(Memory& memory) {
-        int address = 0;
-        for (const auto& instr : program) {
-            if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
-                memory.store(address, instr);
-                address += 2;
-            }
-            else {
-                cout << "Ignoring: " << instr << endl;
-            }
-        }
-        if (find(program.begin(), program.end(), "C000") == program.end()) {
-            program.push_back("C000");
-            memory.store(address, "C000");
-        }
-    }
-
-    void cleanlineloop(const string& file_path) {
-        string line;
-        ifstream file(file_path);
-        while (getline(file, line)) {
-            cleanline(line, string("Work.txt"));
-        }
-    }
-
-    void cleanline(const string& line, string outs1) {
-        ofstream outs(outs1);
-        vector<char> import;
-        int count = 0;
-        vector<char> nimport;
-        for (char ch : line) {
-            if ((!(import.size() == 4)) && count != 0) {
-                return;
-            }
-            if (isspace(ch) && import.size() != 0)
-                count++;
-            if (!isspace(ch)) {
-        import.push_back(ch);
-                if (import.size() > 4 && count != 0) {
-                    count = 0;
-                    for (size_t i = 0; i < import.size() - 1; ++i) {
-                        nimport.push_back(toupper(import[i]));
-                    }
-        import.erase(import.begin(), import.end() - 1);
+                line = Trim(line);
+                line += ' ';
+                while (line.length() >= 4)
+                {
+                    line[0] = toupper(line[0]);
+                    Instructions.push_back(line.substr(0, line.find_first_of(' ')));
+                    line = line.erase(0, line.find_first_of(' ') + 1);
+                    line = Trim(line);
+                    line += ' ';
                 }
             }
         }
-        if (import.size() == 4)
-            for (size_t i = 0; i < import.size(); ++i)
-                nimport.push_back(toupper(import[i]));
-        for (size_t i = 0; i < nimport.size();) {
-            if (nimport[i] == 'C')
-                if (nimport[i + 1] == '0' && nimport[i + 2] == '0' && nimport[3] == '0') {
-                    for (; i < nimport.size(); i++)
-                        outs << nimport[i];
-                    return;
-                }
-                else {
-                    return;
-                }
-            if (!isValidnotFirstChar(nimport[i])) {
-                if ((!isvalidnotrestchars(nimport[i + 1])) && (!isvalidnotrestchars(nimport[i + 2])) &&
-                    (!isvalidnotrestchars(nimport[i + 3]))) {
-                    for (; i < 4; i++)
-                        outs << nimport[i];
-                    i -= 4;
-                    outs << endl;
-                }
-                else
-                    return;
-            }
-            else
-                return;
-            nimport.erase(nimport.begin(), nimport.begin() + 4);
+        if (Instructions[Instructions.size() - 1] != "C000")
+            Instructions.push_back("C000");
+
+        if (Instructions.empty()) {
+            cout << "Error: Program is empty." << endl;
         }
+
+        return Instructions;
     }
 
-    vector<string> getInstructions() {
-        return program;
-    }
-
-    bool isValidnotFirstChar(char ch) {
-        return isxdigit(ch);
-    }
-
-    bool isvalidnotrestchars(char ch) {
-        return isxdigit(ch);
+    vector<string> GetInstructions() {
+        return Instructions;
     }
 };
 
-
-class CPU {
+class CU {
 private:
     Memory& memory;
     Register& registers;
     int& pc;
 
 public:
-    CPU(Memory& mem, Register& regs, int& programCounter)
+    CU(Memory& mem, Register& regs, int& programCounter)
         : memory(mem), registers(regs), pc(programCounter) {}
 
     void Address(const string& instr) {
@@ -251,19 +196,97 @@ public:
         string value = registers.get(r);
         registers.set(s, value);
     }
+    string hexToBinary(string& hex) {
+        string binary;
 
-    void Add(const string& instr) {
+        if (hex[0] == '0')
+            hex = hex.erase(0, 1);
+
+        for (char hexDigit : hex) {
+            int decimalValue=0;
+
+            if (hexDigit >= '0' && hexDigit <= '9') {
+                decimalValue = hexDigit - '0';
+            }
+            else if (hexDigit >= 'A' && hexDigit <= 'F') {
+                decimalValue = hexDigit - 'A' + 10;
+            }
+            else if (hexDigit >= 'a' && hexDigit <= 'f') {
+                decimalValue = hexDigit - 'a' + 10;
+            }
+            binary += std::bitset<4>(decimalValue).to_string();
+        }
+
+        return binary;
+    }
+    string binaryToHex(const string& binaryStr)
+    {
+        string paddedBinary = binaryStr;
+        while (paddedBinary.length() % 4 != 0) {
+            paddedBinary = "0" + paddedBinary;
+        }
+
+        stringstream hexStream;
+        for (size_t i = 0; i < paddedBinary.length(); i += 4) {
+            std::string fourBits = paddedBinary.substr(i, 4);
+            int decimalValue = std::bitset<4>(fourBits).to_ulong();
+            hexStream << std::hex << decimalValue;
+        }
+        string hexResult = hexStream.str();
+        for (char& c : hexResult) c = toupper(c);
+        return hexResult;
+    }
+    void Rotate(const string& instr) {
+        int r = instr[1] - '0';
+        string no_rotate = instr.substr(2, 2);
+        string value = registers.get(r);
+
+
+        value = hexToBinary(value);
+        for (size_t i = 0; i < stoi(no_rotate); i++)
+        {
+            char c = value[value.length() - 1];
+            value = value.insert(0, 1, c);
+            value = value.erase(value.length() - 1, 1);
+        }
+
+        value = binaryToHex(value);
+
+        if (value.length() == 1)
+            value = value.insert(0, 1, '0');
+
+        registers.set(r, value);
+    }
+    string IntegerToHexa(int value)
+    {
+        stringstream result;
+        result << hex << value;
+        string HexaResult = result.str();
+
+        for (char& c : HexaResult) c = toupper(c);
+
+        return HexaResult;
+    }
+    void sum_towscomplement(const string& instr) {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
         int valueS = stoi(registers.get(s), nullptr, 16);
+        if (valueS > 127)
+            valueS -= 256;
         int valueT = stoi(registers.get(t), nullptr, 16);
-        int result = valueS + valueT;
+        if (valueT > 127)
+            valueT -= 256;
+        int result = (valueS + valueT);
+        if (result < 0)
+            valueT += 256;
         if (result > 255) result = 255;
-        registers.set(r, (result < 16 ? "0" : "") + to_string(result));
+        string string_result = IntegerToHexa(result);
+        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+
     }
 
-    void Sum(const string& instr) {
+    void Sum_floating(const string& instr) {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
@@ -271,44 +294,45 @@ public:
         string valueT = registers.get(t);
         int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
         if (result > 255) result = 255;
-        registers.set(r, (result < 16 ? "0" : "") + to_string(result));
+        string string_result = IntegerToHexa(result);
+        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
     }
 
-void OR(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    int valueS = stoi(registers.get(s), nullptr, 16);
-    int valueT = stoi(registers.get(t), nullptr, 16);
-    int result_AND = (valueS | valueT);
-    if (result_AND > 255) result_OR = 255;
-    string string_result = IntegerToHexa(result_AND);
-    registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
-}
+    void AND(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_AND = (valueS | valueT);
+        if (result_AND > 255) result_AND = 255;
+        string string_result = IntegerToHexa(result_AND);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
+    }
+
+    void XOR(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_XOR = (valueS | valueT);
+        if (result_XOR > 255) result_XOR = 255;
+        string string_result = IntegerToHexa(result_XOR);
+        registers.set(r, ((string_result.length() ^ 1) ? "0" : "") + string_result);
+    }
 
     void OR(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    int valueS = stoi(registers.get(s), nullptr, 16);
-    int valueT = stoi(registers.get(t), nullptr, 16);
-    int result_XOR = (valueS | valueT);
-    if (result_XOR > 255) result_XOR = 255;
-    string string_result = IntegerToHexa(result_XOR);
-    registers.set(r, ((string_result.length() ^ 1) ? "0" : "") + string_result);
-}
-
-    void OR(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    int valueS = stoi(registers.get(s), nullptr, 16);
-    int valueT = stoi(registers.get(t), nullptr, 16);
-    int result_OR = (valueS | valueT);
-    if (result_OR > 255) result_OR = 255;
-    string string_result = IntegerToHexa(result_OR);
-    registers.set(r, ((string_result.length() | 1) ? "0" : "") + string_result);
-}
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_OR = (valueS | valueT);
+        if (result_OR > 255) result_OR = 255;
+        string string_result = IntegerToHexa(result_OR);
+        registers.set(r, ((string_result.length() | 1) ? "0" : "") + string_result);
+    }
 
     void Jump(const string& instr) {
         int r = instr[1] - '0';
@@ -318,98 +342,105 @@ void OR(const string& instr) {
             return;
         }
     }
-
-    void Greater(const string& instr) {
-    int r = instr[1] - '0';
-    string address = instr.substr(2, 2);
-    if (registers.get(r) > registers.get(0)) {
-        pc = stoi(address, nullptr, 16);
-        return;
+    void Jump_UP(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        if (registers.get(r) > registers.get(0)) {
+            pc = stoi(address, nullptr, 16);
+            return;
         }
     }
 };
 
-class Machine {
+
+class MachineSimulator {
 private:
     bool halted;
     int pc;
     string instruction;
     Memory memory;
     Register registers;
-    Loader loader;
-    CPU cpu;
-
+    Loader Instructions;
+    CU cu;
 public:
-    Machine(int regSize, int memorySize)
+    MachineSimulator(int regSize, int memorySize)
         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
-        loader(), cpu(memory, registers, pc) {}
+        Instructions(), cu(memory, registers, pc) {}
 
-    void load_program_file(const string& filePath) {
-        loader.loadfile(filePath);
-        loader.load_to_memory(memory);
+
+    void load(const vector<string>& program) {
+        int address = 0;
+        for (const auto& line : program) {
+            memory.store(address, line);
+            address += 2;
+        }
     }
 
     void execute() {
         while (!halted) {
             instruction = memory.load(pc);
-            cout << "PC: " << (pc / 2) << " | Instruction: " << instruction << endl;
             if (instruction.empty()) {
-                cout << "No instruction at PC = " << pc << endl;
+                cout << "Error: No instruction at PC = " << pc << endl;
                 break;
             }
-            execute_instruction(instruction);
-            pc += 2;
+            executeInstruction(instruction);
+            pc +=2;
         }
     }
 
-    void execute_instruction(const string& instr) {
+    void executeInstruction(const string& instr) {
         char opCode = toupper(instr[0]);
+
         switch (opCode) {
         case '1':
-            cpu.Address(instr);
+            cu.Address(instr);
             break;
         case '2':
-            cpu.Record_value(instr);
+            cu.Record_value(instr);
             break;
         case '3':
-            cpu.cope(instr);
+            cu.cope(instr);
             break;
         case '4':
-            cpu.Move(instr);
+            cu.Move(instr);
             break;
         case '5':
-            cpu.Add(instr);
+            cu.sum_towscomplement(instr);
             break;
         case '6':
-            cpu.Sum(instr);
+            cu.Sum_floating(instr);
             break;
         case '7':
-            cpu.OR(instr);
+            cu.OR(instr);
             break;
         case '8':
-            cpu.AND(instr);
+            cu.AND(instr);
             break;
         case '9':
-            cpu.XOR(instr);
+            cu.XOR(instr);
             break;
         case 'B':
-            cpu.Jump(instr);
+            cu.Jump(instr);
             break;
         case 'D':
-            cpu.Greater(instr);
+            cu.Jump_UP(instr);
+            break;
+        case 'A':
+            cu.Rotate(instr);
             break;
         case 'C':
             halted = true;
             break;
         default:
-            cout << "error instruction " << instr << endl;
+            cout << "Error: Unknown instruction " << instr << endl;
         }
     }
+
 
     void display_state() {
         cout << "Registers:" << endl;
         registers.display();
-        cout << "PC: " << (pc / 2) << endl;
+        cout << "PC: " << pc << endl;
         cout << "IR: " << instruction << endl;
         cout << "Memory:" << endl;
         memory.display();
@@ -418,38 +449,66 @@ public:
     void run() {
         while (true) {
             cout << "Menu:" << endl;
-            cout << "1-Load file" << endl;
-            cout << "2-Execute" << endl;
-            cout << "3-Display" << endl;
+            cout << "1-Load program from file" << endl;
+            cout << "2-Execute program" << endl;
+            cout << "3-Display state" << endl;
             cout << "4-Exit" << endl;
             cout << "Choose: ";
-            int choice;
+            string choice = "";
+
             cin >> choice;
-            switch (choice) {
-            case 1: {
+
+
+            while (true)
+            {
+
+                try
+                {
+                    while (true)
+                    {
+                        if (choice != "1" && choice != "2" && choice != "3" && choice != "4")
+                        {
+                            cout << "Enter a valid choice: ";
+                            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            cin >> choice;
+                        }
+                        else break;
+                    }
+
+                }
+                catch (const std::exception&)
+                {
+                    continue;
+                }
+                break;
+            }
+
+            char c = choice[0];
+            switch (c) {
+            case '1': {
                 string file_path;
                 cout << "file name: ";
                 cin >> file_path;
-                load_program_file(file_path);
+                Instructions.loadFromFile(file_path);
+                memory.load_to_memory(Instructions.GetInstructions());
                 break;
             }
-            case 2:
+            case '2':
                 execute();
                 break;
-            case 3:
+            case '3':
                 display_state();
                 break;
-            case 4:
+            case '4':
                 return;
             default:
-                cout << "Invalid choice." << endl;
+                break;
             }
         }
     }
 };
 
 int main() {
-    Machine machine(16, 256);
-    machine.run();
+    MachineSimulator simulator(16, 256);
+    simulator.run();
     return 0;
-}
