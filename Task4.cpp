@@ -225,14 +225,12 @@ public:
         while (paddedBinary.length() % 4 != 0) {
             paddedBinary = "0" + paddedBinary;
         }
-
         stringstream hexStream;
         for (size_t i = 0; i < paddedBinary.length(); i += 4) {
             std::string fourBits = paddedBinary.substr(i, 4);
             int decimalValue = std::bitset<4>(fourBits).to_ulong();
             hexStream << std::hex << decimalValue;
         }
-
         string hexResult = hexStream.str();
         for (char& c : hexResult) c = toupper(c);
         return hexResult;
@@ -248,7 +246,6 @@ public:
             value= value.insert(0,1,c);
             value=value.erase(value.length() - 1, 1);
         }
-
         value = binaryToHex(value);
 
         if (value.length() == 1)
@@ -263,9 +260,9 @@ public:
         string HexaResult = result.str();
         
         for (char& c : HexaResult) c = toupper(c);
-        
         return HexaResult;
     }
+
     void sum_towscomplement(const string& instr) {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
@@ -328,11 +325,21 @@ public:
         int result_OR = (valueS | valueT);
         if (result_OR > 255) result_OR = 255;
         registers.set(r, (result_OR < 16 ? "0" : "") + to_string(result_OR));
-}
+    }
+
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) == registers.get(0)) {
+            pc = stoi(address, nullptr, 16);
+            return;
+        }
+    }
+
+    void Greater(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        if (registers.get(r) > registers.get(0)) {
             pc = stoi(address, nullptr, 16);
             return;
         }
