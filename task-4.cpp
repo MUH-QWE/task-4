@@ -203,7 +203,7 @@ public:
             hex = hex.erase(0, 1);
 
         for (char hexDigit : hex) {
-            int decimalValue=0;
+            int decimalValue = 0;
 
             if (hexDigit >= '0' && hexDigit <= '9') {
                 decimalValue = hexDigit - '0';
@@ -338,7 +338,7 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) == registers.get(0)) {
-            pc = stoi(address, nullptr, 16);
+            pc = stoi(address, nullptr, 16)-2;
             return;
         }
     }
@@ -384,7 +384,7 @@ public:
                 break;
             }
             executeInstruction(instruction);
-            pc +=2;
+            pc += 2;
         }
     }
 
@@ -512,3 +512,4 @@ int main() {
     MachineSimulator simulator(16, 256);
     simulator.run();
     return 0;
+}
