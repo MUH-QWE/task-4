@@ -327,7 +327,7 @@ public:
         int result_OR = (valueS | valueT);
         if (result_OR > 255) result_OR = 255;
         string string_result = IntegerToHexa(result_OR);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+        registers.set(r, (string_result.length() | 1 ? "0" : "") + string_result);
     }
 
     void Jump(const string& instr) {
