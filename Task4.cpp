@@ -52,8 +52,7 @@ public:
                 {
                     cout << endl;
                     counter = 0;
-                }
-                    
+            }     
         }
     }
 };
@@ -91,7 +90,6 @@ private:
 
 public:
     string Trim(string text) {
-        // Remove spaces at the beginning
         if (text.length() == 0)
             return "";
 
@@ -100,7 +98,6 @@ public:
             start++;
         }
 
-        // Remove spaces at the end
         size_t end = text.size() - 1;
         while (end > start && text[end] == ' ') {
             end--;
@@ -201,7 +198,7 @@ public:
     string hexToBinary( string& hex) {
         string binary;
 
-        if (hex[0] == '0')// because zero digit affect on the result 
+        if (hex[0] == '0')
             hex = hex.erase(0, 1);
 
         for (char hexDigit : hex) {
@@ -217,8 +214,6 @@ public:
                 decimalValue = hexDigit - 'a' + 10;
             }
             
-
-            // Convert decimal value to a 4-bit binary string
             binary += std::bitset<4>(decimalValue).to_string();
         }
 
@@ -226,23 +221,18 @@ public:
     }
     string binaryToHex(const string& binaryStr) 
     {
-        // Padding the binary string to make its length a multiple of 4
         string paddedBinary = binaryStr;
         while (paddedBinary.length() % 4 != 0) {
-            paddedBinary = "0" + paddedBinary; // Pad with leading zeros
+            paddedBinary = "0" + paddedBinary;
         }
 
         stringstream hexStream;
         for (size_t i = 0; i < paddedBinary.length(); i += 4) {
-            // Take each group of 4 binary digits
             std::string fourBits = paddedBinary.substr(i, 4);
-            // Convert the 4 binary digits to an integer
             int decimalValue = std::bitset<4>(fourBits).to_ulong();
-            // Convert the integer to a hexadecimal character and add to the result
             hexStream << std::hex << decimalValue;
         }
 
-        // Convert to uppercase if desired
         string hexResult = hexStream.str();
         for (char& c : hexResult) c = toupper(c);
         return hexResult;
@@ -251,9 +241,7 @@ public:
         int r = instr[1] - '0';
         string no_rotate = instr.substr(2, 2);
         string value = registers.get(r);
-        
-       
-        value = hexToBinary(value);// convert from hexa to binary
+        value = hexToBinary(value);
         for (size_t i = 0; i < stoi(no_rotate); i++)
         {
             char c = value[value.length() - 1];
@@ -334,7 +322,6 @@ public:
          : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
         Instructions(), cu(memory, registers, pc) {}
 
-
     void load(const vector<string>& program) {
         int address = 0;
         for (const auto& line : program) {
@@ -391,7 +378,6 @@ public:
             cout << "Error: Unknown instruction " << instr << endl;
         }
     }
-
     
     void display_state() {
         cout << "Registers:" << endl;
@@ -411,9 +397,7 @@ public:
             cout << "4-Exit" << endl;
             cout << "Choose: ";
             string choice = "";
-
             cin >> choice;
-
 
             while (true)
             {
@@ -446,7 +430,7 @@ public:
                 cout << "file name: ";
                 cin >> file_path;
                 Instructions.loadFromFile(file_path);
-                memory.load_to_memory(Instructions.GetInstructions());// store all instructions in memory
+                memory.load_to_memory(Instructions.GetInstructions());
                 break;
             }
             case '2':
