@@ -264,23 +264,20 @@ public:
     }
 
     void sum_towscomplement(const string& instr) {
-        int r = instr[1] - '0';
-        int s = instr[2] - '0';
-        int t = instr[3] - '0';
-        int valueS = stoi(registers.get(s), nullptr, 16);
-        if (valueS > 127)
-            valueS -= 256;
-        int valueT = stoi(registers.get(t), nullptr, 16);
-        if (valueT > 127)
-            valueT -= 256;
-        int result = (valueS + valueT);
-        if (result < 0)
-            valueT += 256;
-        if (result > 255) result = 255;
-        string string_result = IntegerToHexa(result);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
-
-    }
+    int r = instr[1] - '0';
+    int s = instr[2] - '0';
+    int t = instr[3] - '0';
+    int valueS = stoi(registers.get(s), nullptr, 16);
+    if (valueS > 127) valueS -= 256;
+    int valueT = stoi(registers.get(t), nullptr, 16);
+    if (valueT > 127) valueT -= 256;
+    int result = valueS + valueT;
+    if (result < -128) result += 256;
+    if (result > 127) result -= 256;
+    result = (result + 256) % 256;
+    string string_result = IntegerToHexa(result);
+    registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
+}
 
     void Sum_floating(const string& instr) {
         int r = instr[1] - '0';
