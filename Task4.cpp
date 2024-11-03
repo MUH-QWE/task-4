@@ -18,6 +18,7 @@ public:
     void store(int address, const string& value) {
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
+            if (value.length() == 4)
             memory[address + 1] = value.substr(2, 2);
         }
     }
@@ -53,6 +54,7 @@ public:
                 cout << endl;
                 counter = 0;
             }
+
         }
     }
 };
@@ -202,7 +204,7 @@ public:
             hex = hex.erase(0, 1);
 
         for (char hexDigit : hex) {
-            int decimalValue;
+            int decimalValue = 0;
 
             if (hexDigit >= '0' && hexDigit <= '9') {
                 decimalValue = hexDigit - '0';
@@ -213,8 +215,7 @@ public:
             else if (hexDigit >= 'a' && hexDigit <= 'f') {
                 decimalValue = hexDigit - 'a' + 10;
             }
-
-            binary += bitset<4> (decimalValue).to_string();
+            binary += std::bitset<4>(decimalValue).to_string();
         }
 
         return binary;
@@ -225,11 +226,12 @@ public:
         while (paddedBinary.length() % 4 != 0) {
             paddedBinary = "0" + paddedBinary;
         }
+
         stringstream hexStream;
         for (size_t i = 0; i < paddedBinary.length(); i += 4) {
-            string fourBits = paddedBinary.substr(i, 4);
-            int decimalValue = bitset<4>(fourBits).to_ulong();
-            hexStream << hex << decimalValue;
+            std::string fourBits = paddedBinary.substr(i, 4);
+            int decimalValue = std::bitset<4>(fourBits).to_ulong();
+            hexStream << std::hex << decimalValue;
         }
         string hexResult = hexStream.str();
         for (char& c : hexResult) c = toupper(c);
@@ -239,13 +241,16 @@ public:
         int r = instr[1] - '0';
         string no_rotate = instr.substr(2, 2);
         string value = registers.get(r);
+
+
         value = hexToBinary(value);
-        for (size_t i = 0; i < stoi(no_rotate); i++)
+        for (size_t i = 0; i < stoi(no_rotate,nullptr,16); i++)
         {
             char c = value[value.length() - 1];
             value = value.insert(0, 1, c);
             value = value.erase(value.length() - 1, 1);
         }
+
         value = binaryToHex(value);
 
         if (value.length() == 1)
@@ -260,35 +265,122 @@ public:
         string HexaResult = result.str();
 
         for (char& c : HexaResult) c = toupper(c);
+
         return HexaResult;
     }
-
     void sum_towscomplement(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    int valueS = stoi(registers.get(s), nullptr, 16);
-    if (valueS > 127) valueS -= 256;
-    int valueT = stoi(registers.get(t), nullptr, 16);
-    if (valueT > 127) valueT -= 256;
-    int result = valueS + valueT;
-    if (result < -128) result += 256;
-    if (result > 127) result -= 256;
-    result = (result + 256) % 256;
-    string string_result = IntegerToHexa(result);
-    registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
-}
-
-    void Sum_floating(const string& instr) {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
-        string valueS = registers.get(s);
-        string valueT = registers.get(t);
-        int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
-        if (result > 255) result = 255;
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        if (valueS > 127) valueS -= 256;
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        if (valueT > 127) valueT -= 256;
+        int result = valueS + valueT;
+        if (result < -128) result += 256;
+        if (result > 127) result -= 256;
+        result = (result + 256) % 256;
         string string_result = IntegerToHexa(result);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
+    }
+
+    bitset<4> binarydouble(double num) {
+        int count = 0;
+        while (num > .025) {
+            num -= .025;
+            count += 1;
+        }
+        while (count % 10 != 0) {
+            count++;
+        }
+        count /= 10;
+        bitset<4> ret = count;
+        return ret;
+    }
+    string sumdouble(string Dfir, string Dsec) {
+        bitset<8> Df = stoi(Dfir, nullptr, 16);
+        int sign1 = (Df[7]) ? -1 : 1;
+        string moved1 = Df.to_string();
+        int move1 = stoi(moved1.substr(1, 3), nullptr, 2) - 4;
+        bitset<4> four1 = (Df << 4).to_ulong();
+        double mantissa1 = 0.0;
+        for (int i = 0; i < 4; i++)
+            if (moved1[4 + i] == '1')
+                mantissa1 += pow(2, -(i + 1));
+        double value1 = sign1 * mantissa1 * pow(2, move1);
+        bitset<8> Ds = stoul(Dsec, nullptr, 16);
+        int sign2 = (Ds[7]) ? -1 : 1;
+        string moved2 = Ds.to_string();
+        int move2 = stoi(moved2.substr(1, 3), nullptr, 2) - 4;
+        bitset<4> four2 = (Ds << 4).to_ulong();
+        double mantissa2 = 0.0;
+        for (int i = 0; i < 4; i++)
+            if (moved2[4 + i] == '1')
+                mantissa2 += pow(2, -(i + 1));
+        double value2 = sign2 * mantissa2 * pow(2, move2);
+        double result = value1 + value2;
+        string sign3 = "0";
+        string final;
+        if (result < 0) {
+            sign3 = "1";
+            result *= -1;
+        }
+        if (result < 1) {
+            bitset<4> res = binarydouble(result);
+            int i = 0;
+            while (res[3] != 1) {
+                res = res << 1;
+                i++;
+            }
+            bitset<3> idi = i;
+            final = sign3 + idi.to_string() + res.to_string();
+        }
+        else {
+            double fraction = result - floor(result);
+            double importnum = result - fraction;
+            bitset<4> res2 = binarydouble(fraction);
+            bitset<4> res1 = importnum;
+            int index = 0;
+            int j = 3;
+            while (res1[j] != 1) {
+                index++;
+                j--;
+            }
+            index = -(index - 4);
+            index += 4;
+            while (res1[3] != 1)
+                res1 = res1 << 1;
+            for (int i = 3; i > 0; i--) {
+                if (res2[3] == 1)
+                    break;
+                res2 = res2 << 1;
+            }
+            int i = 0;
+            while (res1[i] != 1) {
+                if (res2[3] == 1) {
+                    res1[i] = 1;
+                }
+                res2 = res2 << 1;
+                i++;
+            }
+            bitset<3> idi = index;
+            final = sign3 + idi.to_string() + res1.to_string();
+        }
+        int finaly = bitset<32>(final).to_ulong();
+        stringstream ss;
+        ss << uppercase << hex << finaly;
+        return ss.str();
+    }
+
+    void sum_floating(string instr)
+    {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        string ValueS = registers.get(s);
+        string ValueT = registers.get(t);
+        string result = sumdouble(ValueS, ValueT);
+        registers.set(r, result);
     }
 
     void AND(const string& instr) {
@@ -297,10 +389,10 @@ public:
         int t = instr[3] - '0';
         int valueS = stoi(registers.get(s), nullptr, 16);
         int valueT = stoi(registers.get(t), nullptr, 16);
-        int result_AND = valueS & valueT;
+        int result_AND = (valueS | valueT);
         if (result_AND > 255) result_AND = 255;
         string string_result = IntegerToHexa(result_AND);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
     }
 
     void XOR(const string& instr) {
@@ -309,10 +401,10 @@ public:
         int t = instr[3] - '0';
         int valueS = stoi(registers.get(s), nullptr, 16);
         int valueT = stoi(registers.get(t), nullptr, 16);
-        int result_XOR = (valueS ^ valueT);
+        int result_XOR = (valueS | valueT);
         if (result_XOR > 255) result_XOR = 255;
         string string_result = IntegerToHexa(result_XOR);
-        registers.set(r, (string_result.length() ^ 1 ? "0" : "") + string_result);
+        registers.set(r, ((string_result.length() ^ 1) ? "0" : "") + string_result);
     }
 
     void OR(const string& instr) {
@@ -324,27 +416,24 @@ public:
         int result_OR = (valueS | valueT);
         if (result_OR > 255) result_OR = 255;
         string string_result = IntegerToHexa(result_OR);
-        registers.set(r, (string_result.length() | 1 ? "0" : "") + string_result);
+        registers.set(r, ((string_result.length() | 1) ? "0" : "") + string_result);
     }
 
     void Jump(const string& instr) {
-        int r = instr[1] - '0'; 
-        string address = instr.substr(2, 2);
-        int targetAddress;
-        try {targetAddress = stoi(address, nullptr, 16);}
-        catch (const invalid_argument&) {return;}
-        if (registers.get(r) == registers.get(0)) {pc = targetAddress;}
-    }
-
-
-
-    void Greater(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
-        int targetAddress;
-        try { targetAddress = stoi(address, nullptr, 16); }
-        catch (const invalid_argument&) { return; }
-        if (registers.get(r) > registers.get(0)) { pc = targetAddress; }
+        if (registers.get(r) == registers.get(0)) {
+            pc = stoi(address, nullptr, 16)-2;
+            return;
+        }
+    }
+    void Jump_UP(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        if (registers.get(r) > registers.get(0)) {
+            pc = stoi(address, nullptr, 16)-2;
+            return;
+        }
     }
 };
 
@@ -362,6 +451,7 @@ public:
     MachineSimulator(int regSize, int memorySize)
         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
         Instructions(), cu(memory, registers, pc) {}
+
 
     void load(const vector<string>& program) {
         int address = 0;
@@ -403,7 +493,7 @@ public:
             cu.sum_towscomplement(instr);
             break;
         case '6':
-            cu.Sum_floating(instr);
+            cu.sum_floating(instr);
             break;
         case '7':
             cu.OR(instr);
@@ -414,22 +504,23 @@ public:
         case '9':
             cu.XOR(instr);
             break;
-        case 'A':
-            cu.Rotate(instr);
-            break;
         case 'B':
             cu.Jump(instr);
+            break;
+        case 'D':
+            cu.Jump_UP(instr);
+            break;
+        case 'A':
+            cu.Rotate(instr);
             break;
         case 'C':
             halted = true;
             break;
-        case 'D':
-            cu.Greater(instr);
-            break;
         default:
-            cout << "error: Unknown instruction " << instr << endl;
+            cout << "Error: Unknown instruction " << instr << endl;
         }
     }
+
 
     void display_state() {
         cout << "Registers:" << endl;
@@ -449,7 +540,9 @@ public:
             cout << "4-Exit" << endl;
             cout << "Choose: ";
             string choice = "";
+
             cin >> choice;
+
 
             while (true)
             {
