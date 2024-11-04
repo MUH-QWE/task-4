@@ -18,11 +18,12 @@ public:
     void store(int address, const string& value) {
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
-            memory[address+1] = value.substr(2, 2);
+            if (value.length() == 4)
+                memory[address + 1] = value.substr(2, 2);
         }
     }
     void load_to_memory(vector <string> Instructions) {
-        int address = 0;
+        int address = 10;
         for (const auto& instr : Instructions) {
             if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
                 store(address, instr);
@@ -31,12 +32,12 @@ public:
         }
 
     }
-    
+
     string load(int address) {
         string instruction;
         if (address >= 0 && address < 256) {
 
-            instruction= memory[address]+ memory[address+1];
+            instruction = memory[address] + memory[address + 1];
             return instruction;
         }
         return "0000";
@@ -45,15 +46,15 @@ public:
     void display() {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
-            
+
             cout << setw(2) << setfill('0') << memory[i] << " ";
-                counter++;
-                if (counter == 16)
-                {
-                    cout << endl;
-                    counter = 0;
-                }
-                    
+            counter++;
+            if (counter == 16)
+            {
+                cout << endl;
+                counter = 0;
+            }
+
         }
     }
 };
@@ -87,11 +88,10 @@ public:
 
 class Loader {
 private:
-     vector<string> Instructions;
+    vector<string> Instructions;
 
 public:
     string Trim(string text) {
-        // Remove spaces at the beginning
         if (text.length() == 0)
             return "";
 
@@ -100,13 +100,27 @@ public:
             start++;
         }
 
-        // Remove spaces at the end
         size_t end = text.size() - 1;
         while (end > start && text[end] == ' ') {
             end--;
         }
 
         return text.substr(start, end - start + 1);
+    }
+    string ConvertToHexa(string line)
+    {
+        for (char& c : line)
+        {
+            c = toupper(c);
+            int n = -1;
+
+            if (isdigit(c)) n = c - '0';
+            if (isupper(c)) n = c - 'A';
+
+            if (n > 15 or n < 0)
+                c = ' ';
+        }
+        return line;
     }
 
     vector<string> loadFromFile(const string& filePath) {
@@ -121,17 +135,21 @@ public:
         while (getline(file, line)) {
             if (!line.empty()) {
 
-                line= Trim(line);
+                line = ConvertToHexa(line);
+                
+                line = Trim(line);
                 line += ' ';
-                while (line.length() >=4)
+                while (line.length() >= 4)
                 {
-                    line[0] = toupper(line[0]);
-                    Instructions.push_back(line.substr(0,line.find_first_of(' ')));
-                    line=line.erase(0, line.find_first_of(' ')+1);
-                    line = Trim(line);
-                    line += ' ';
+                    
+                        if(line.substr(0, line.find_first_of(' ')).length()==4)
+                              Instructions.push_back(line.substr(0, line.find_first_of(' ')));
+                    
+                        line = line.erase(0, line.find_first_of(' ') + 1);
+                        line = Trim(line);
+                        line += ' ';
                 }
-                }
+            }
         }
         if (Instructions[Instructions.size() - 1] != "C000")
             Instructions.push_back("C000");
@@ -143,7 +161,7 @@ public:
         return Instructions;
     }
 
-     vector<string> GetInstructions() {
+    vector<string> GetInstructions() {
         return Instructions;
     }
 };
@@ -198,14 +216,14 @@ public:
         string value = registers.get(r);
         registers.set(s, value);
     }
-    string hexToBinary( string& hex) {
+    string hexToBinary(string& hex) {
         string binary;
 
-        if (hex[0] == '0')// because zero digit affect on the result 
+        if (hex[0] == '0')
             hex = hex.erase(0, 1);
 
         for (char hexDigit : hex) {
-            int decimalValue;
+            int decimalValue = 0;
 
             if (hexDigit >= '0' && hexDigit <= '9') {
                 decimalValue = hexDigit - '0';
@@ -216,33 +234,24 @@ public:
             else if (hexDigit >= 'a' && hexDigit <= 'f') {
                 decimalValue = hexDigit - 'a' + 10;
             }
-            
-
-            // Convert decimal value to a 4-bit binary string
             binary += std::bitset<4>(decimalValue).to_string();
         }
 
         return binary;
     }
-    string binaryToHex(const string& binaryStr) 
+    string binaryToHex(const string& binaryStr)
     {
-        // Padding the binary string to make its length a multiple of 4
         string paddedBinary = binaryStr;
         while (paddedBinary.length() % 4 != 0) {
-            paddedBinary = "0" + paddedBinary; // Pad with leading zeros
+            paddedBinary = "0" + paddedBinary;
         }
 
         stringstream hexStream;
         for (size_t i = 0; i < paddedBinary.length(); i += 4) {
-            // Take each group of 4 binary digits
             std::string fourBits = paddedBinary.substr(i, 4);
-            // Convert the 4 binary digits to an integer
             int decimalValue = std::bitset<4>(fourBits).to_ulong();
-            // Convert the integer to a hexadecimal character and add to the result
             hexStream << std::hex << decimalValue;
         }
-
-        // Convert to uppercase if desired
         string hexResult = hexStream.str();
         for (char& c : hexResult) c = toupper(c);
         return hexResult;
@@ -251,31 +260,31 @@ public:
         int r = instr[1] - '0';
         string no_rotate = instr.substr(2, 2);
         string value = registers.get(r);
-        
-       
-        value = hexToBinary(value);// convert from hexa to binary
-        for (size_t i = 0; i < stoi(no_rotate); i++)
+
+
+        value = hexToBinary(value);
+        for (size_t i = 0; i < stoi(no_rotate, nullptr, 16); i++)
         {
             char c = value[value.length() - 1];
-            value= value.insert(0,1,c);
-            value=value.erase(value.length() - 1, 1);
+            value = value.insert(0, 1, c);
+            value = value.erase(value.length() - 1, 1);
         }
 
         value = binaryToHex(value);
 
         if (value.length() == 1)
-            value= value.insert(0, 1, '0');
-        
+            value = value.insert(0, 1, '0');
+
         registers.set(r, value);
     }
     string IntegerToHexa(int value)
     {
         stringstream result;
-        result<< hex << value;
+        result << hex << value;
         string HexaResult = result.str();
-        
+
         for (char& c : HexaResult) c = toupper(c);
-        
+
         return HexaResult;
     }
     void sum_towscomplement(const string& instr) {
@@ -283,37 +292,170 @@ public:
         int s = instr[2] - '0';
         int t = instr[3] - '0';
         int valueS = stoi(registers.get(s), nullptr, 16);
-        if (valueS > 127)
-            valueS -= 256;
+        if (valueS > 127) valueS -= 256;
         int valueT = stoi(registers.get(t), nullptr, 16);
-        if (valueT > 127)
-            valueT -= 256;
-        int result = (valueS + valueT);
-        if (result < 0)
-            valueT += 256;
-        if (result > 255) result = 255;
+        if (valueT > 127) valueT -= 256;
+        int result = valueS + valueT;
+        if (result < -128) result += 256;
+        if (result > 127) result -= 256;
+        result = (result + 256) % 256;
         string string_result = IntegerToHexa(result);
-        registers.set(r, (string_result.length()==1 ? "0"   : "") + string_result);
-
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
     }
 
-    void Sum_floating(const string& instr) {
+    bitset<4> binarydouble(double num) {
+        int count = 0;
+        //a while loop to extract the binary of the floating point number
+        while (num > .025) {
+            num -= .025;
+            count += 1;
+        }
+        //covers up for the loss of data due to floating pint
+        while (count % 10 != 0) {
+            count++;
+        }
+        count /= 10;
+        bitset<4> ret = count;
+        return ret;
+    }
+    string sumdouble(string Dfir, string Dsec) {
+        bitset<8> Df = stoi(Dfir, nullptr, 16);
+        int sign1 = (Df[7]) ? -1 : 1;
+        string moved1 = Df.to_string();
+        int move1 = stoi(moved1.substr(1, 3), nullptr, 2) - 4;
+        double mantissa1 = 0.0;
+        //calculates the mantissa of the first number
+        for (int i = 0; i < 4; i++)
+            if (moved1[4 + i] == '1')
+                mantissa1 += pow(2, -(i + 1));
+        double value1 = sign1 * mantissa1 * pow(2, move1);
+        bitset<8> Ds = stoul(Dsec, nullptr, 16);
+        int sign2 = (Ds[7]) ? -1 : 1;
+        string moved2 = Ds.to_string();
+        int move2 = stoi(moved2.substr(1, 3), nullptr, 2) - 4;
+        double mantissa2 = 0.0;
+        //the mantissa of the second number
+        for (int i = 0; i < 4; i++)
+            if (moved2[4 + i] == '1')
+                mantissa2 += pow(2, -(i + 1));
+        double value2 = sign2 * mantissa2 * pow(2, move2);
+        double result = value1 + value2;
+        //after the last result is calculated 
+        //the number is returned to being a two hexdecimal digits
+        string sign3 = "0";
+        string final;
+        if (result < 0) {
+            sign3 = "1";
+            result *= -1;
+        }
+        if (result < 1) {
+            bitset<4> res = binarydouble(result);
+            int i = 0;
+            while (res[3] != 1) {
+                res = res << 1;
+                i++;
+            }
+            bitset<3> idi = i;
+            final = sign3 + idi.to_string() + res.to_string();
+        }
+        else {
+            //splites the number into two 
+            double fraction = result - floor(result);   //the floating fraction 
+            double importnum = result - fraction;       //and the number
+            bitset<4> res2 = binarydouble(fraction);    //turn the fraction into binary using binarydouble function
+            bitset<4> res1 = importnum;
+            int index = 0;
+            int j = 3;
+            while (res1[j] != 1) {
+                index++;
+                j--;
+            }
+            index = -(index - 4);
+            index += 4;                    // to get the exponent
+            while (res1[3] != 1)
+                res1 = res1 << 1;
+            for (int i = 3; i > 0; i--) {
+                if (res2[3] == 1)
+                    break;
+                res2 = res2 << 1;
+            }
+            int i = 0;
+            while (res1[i] != 1) {
+                if (res2[3] == 1) {
+                    res1[i] = 1;        // putes the two numbers together again but in the mantissa binary form
+                }
+                res2 = res2 << 1;
+                i++;
+            }
+            bitset<3> idi = index;
+            final = sign3 + idi.to_string() + res1.to_string(); //final result number
+        }
+        int finaly = bitset<32>(final).to_ulong();
+        stringstream ss;
+        ss << uppercase << hex << finaly;            //finaly returns the number in hexdecimal form
+        return ss.str();
+    }
+
+    void sum_floating(string instr)
+    {
         int r = instr[1] - '0';
         int s = instr[2] - '0';
         int t = instr[3] - '0';
-        string valueS = registers.get(s);
-        string valueT = registers.get(t);
-        int result = stoi(valueS, nullptr, 16) + stoi(valueT, nullptr, 16);
-        if (result > 255) result = 255;
-        string string_result = IntegerToHexa(result);
-        registers.set(r, (string_result.length() == 1 ? "0" : "") + string_result);
+        string ValueS = registers.get(s);
+        string ValueT = registers.get(t);
+        string result = sumdouble(ValueS, ValueT);
+        registers.set(r, result);
+    }
+
+    void AND(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_AND = (valueS & valueT);
+        if (result_AND > 255) result_AND = 255;
+        string string_result = IntegerToHexa(result_AND);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
+    }
+
+    void XOR(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_XOR = (valueS ^ valueT);
+        if (result_XOR > 255) result_XOR = 255;
+        string string_result = IntegerToHexa(result_XOR);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
+    }
+
+    void OR(const string& instr) {
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        int valueS = stoi(registers.get(s), nullptr, 16);
+        int valueT = stoi(registers.get(t), nullptr, 16);
+        int result_OR = (valueS | valueT);
+        if (result_OR > 255) result_OR = 255;
+        string string_result = IntegerToHexa(result_OR);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
     }
 
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) == registers.get(0)) {
-            pc = stoi(address, nullptr, 16);
+            pc = stoi(address, nullptr, 16) - 2;
+            return;
+        }
+    }
+    void Jump_UP(const string& instr) {
+        int r = instr[1] - '0';
+        string address = instr.substr(2, 2);
+        if (registers.get(r) > registers.get(0)) {
+            pc = stoi(address, nullptr, 16) - 2;
             return;
         }
     }
@@ -331,7 +473,7 @@ private:
     CU cu;
 public:
     MachineSimulator(int regSize, int memorySize)
-         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
+        : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
         Instructions(), cu(memory, registers, pc) {}
 
 
@@ -351,7 +493,7 @@ public:
                 break;
             }
             executeInstruction(instruction);
-            pc+=2;
+            pc += 2;
         }
     }
 
@@ -375,11 +517,22 @@ public:
             cu.sum_towscomplement(instr);
             break;
         case '6':
-            cu.Sum_floating(instr);
+            cu.sum_floating(instr);
             break;
-
+        case '7':
+            cu.OR(instr);
+            break;
+        case '8':
+            cu.AND(instr);
+            break;
+        case '9':
+            cu.XOR(instr);
+            break;
         case 'B':
             cu.Jump(instr);
+            break;
+        case 'D':
+            cu.Jump_UP(instr);
             break;
         case 'A':
             cu.Rotate(instr);
@@ -388,11 +541,11 @@ public:
             halted = true;
             break;
         default:
-            cout << "Error: Unknown instruction " << instr << endl;
+            break;
         }
     }
 
-    
+
     void display_state() {
         cout << "Registers:" << endl;
         registers.display();
@@ -446,7 +599,7 @@ public:
                 cout << "file name: ";
                 cin >> file_path;
                 Instructions.loadFromFile(file_path);
-                memory.load_to_memory(Instructions.GetInstructions());// store all instructions in memory
+                memory.load_to_memory(Instructions.GetInstructions());
                 break;
             }
             case '2':
@@ -465,7 +618,7 @@ public:
 };
 
 int main() {
-    MachineSimulator simulator(16,256);
+    MachineSimulator simulator(16, 256);
     simulator.run();
     return 0;
 }
