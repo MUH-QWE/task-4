@@ -19,7 +19,7 @@ public:
         if (address >= 0 && address < 256) {
             memory[address] = value.substr(0, 2);
             if (value.length() == 4)
-            memory[address + 1] = value.substr(2, 2);
+                memory[address + 1] = value.substr(2, 2);
         }
     }
     void load_to_memory(vector <string> Instructions) {
@@ -107,6 +107,21 @@ public:
 
         return text.substr(start, end - start + 1);
     }
+    string ConvertToHexa(string line)
+    {
+        for (char& c : line)
+        {
+            c = toupper(c);
+            int n = -1;
+
+            if (isdigit(c)) n = c - '0';
+            if (isupper(c)) n = c - 'A';
+
+            if (n > 15 or n < 0)
+                c = ' ';
+        }
+        return line;
+    }
 
     vector<string> loadFromFile(const string& filePath) {
         ifstream file(filePath);
@@ -120,15 +135,19 @@ public:
         while (getline(file, line)) {
             if (!line.empty()) {
 
+                line = ConvertToHexa(line);
+                
                 line = Trim(line);
                 line += ' ';
                 while (line.length() >= 4)
                 {
-                    line[0] = toupper(line[0]);
-                    Instructions.push_back(line.substr(0, line.find_first_of(' ')));
-                    line = line.erase(0, line.find_first_of(' ') + 1);
-                    line = Trim(line);
-                    line += ' ';
+                    
+                        if(line.substr(0, line.find_first_of(' ')).length()==4)
+                              Instructions.push_back(line.substr(0, line.find_first_of(' ')));
+                    
+                        line = line.erase(0, line.find_first_of(' ') + 1);
+                        line = Trim(line);
+                        line += ' ';
                 }
             }
         }
@@ -244,7 +263,7 @@ public:
 
 
         value = hexToBinary(value);
-        for (size_t i = 0; i < stoi(no_rotate,nullptr,16); i++)
+        for (size_t i = 0; i < stoi(no_rotate, nullptr, 16); i++)
         {
             char c = value[value.length() - 1];
             value = value.insert(0, 1, c);
@@ -351,14 +370,14 @@ public:
                 index++;
                 j--;
             }
-            index = -(index - 4); 
+            index = -(index - 4);
             index += 4;                    // to get the exponent
             while (res1[3] != 1)
                 res1 = res1 << 1;
             for (int i = 3; i > 0; i--) {
                 if (res2[3] == 1)
-                    break;                    
-                res2 = res2 << 1;            
+                    break;
+                res2 = res2 << 1;
             }
             int i = 0;
             while (res1[i] != 1) {
@@ -409,7 +428,7 @@ public:
         int result_XOR = (valueS ^ valueT);
         if (result_XOR > 255) result_XOR = 255;
         string string_result = IntegerToHexa(result_XOR);
-        registers.set(r, ((string_result.length() ^ 1) ? "0" : "") + string_result);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
     }
 
     void OR(const string& instr) {
@@ -421,14 +440,14 @@ public:
         int result_OR = (valueS | valueT);
         if (result_OR > 255) result_OR = 255;
         string string_result = IntegerToHexa(result_OR);
-        registers.set(r, ((string_result.length() | 1) ? "0" : "") + string_result);
+        registers.set(r, ((string_result.length() == 1) ? "0" : "") + string_result);
     }
 
     void Jump(const string& instr) {
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) == registers.get(0)) {
-            pc = stoi(address, nullptr, 16)-2;
+            pc = stoi(address, nullptr, 16) - 2;
             return;
         }
     }
@@ -436,7 +455,7 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         if (registers.get(r) > registers.get(0)) {
-            pc = stoi(address, nullptr, 16)-2;
+            pc = stoi(address, nullptr, 16) - 2;
             return;
         }
     }
@@ -452,6 +471,7 @@ private:
     Register registers;
     Loader Instructions;
     CU cu;
+    bool PrintEachStep = false;
 public:
     MachineSimulator(int regSize, int memorySize)
         : halted(false), pc(0), instruction("0000"), registers(regSize), memory(memorySize),
@@ -466,7 +486,7 @@ public:
         }
     }
 
-    void execute() {
+    void execute(bool PrintEachStep) {
         while (!halted) {
             instruction = memory.load(pc);
             if (instruction.empty()) {
@@ -475,6 +495,12 @@ public:
             }
             executeInstruction(instruction);
             pc += 2;
+            
+            if (PrintEachStep)
+            {
+                display_state();
+            }
+           
         }
     }
 
@@ -522,7 +548,7 @@ public:
             halted = true;
             break;
         default:
-            cout << "Error: Unknown instruction " << instr << endl;
+            break;
         }
     }
 
@@ -539,10 +565,8 @@ public:
     void run() {
         while (true) {
             cout << "Menu:" << endl;
-            cout << "1-Load program from file" << endl;
-            cout << "2-Execute program" << endl;
-            cout << "3-Display state" << endl;
-            cout << "4-Exit" << endl;
+            cout << "1-Load Instructions from file" << endl;
+            cout << "2-Exit" << endl;
             cout << "Choose: ";
             string choice = "";
 
@@ -556,7 +580,7 @@ public:
                 {
                     while (true)
                     {
-                        if (choice != "1" && choice != "2" && choice != "3" && choice != "4")
+                        if (choice != "1" && choice != "2" )
                         {
                             cout << "Enter a valid choice: ";
                             cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -581,15 +605,30 @@ public:
                 cin >> file_path;
                 Instructions.loadFromFile(file_path);
                 memory.load_to_memory(Instructions.GetInstructions());
+                //excute the instructions
+                cout << "are you want print the state after each excute ? Y/N: ";
+                string choice2;
+                bool PrintEachStep = false;
+                cin >> choice2;
+                while (choice2 != "Y" && choice2 != "y" && choice2 != "N" && choice2 != "n")
+                {
+                    cout << "enter a valid choice Y/N: ";
+                    cin >> choice2;
+                }
+
+                if (choice2 == "y" or choice2 == "Y")
+                    PrintEachStep = true;
+
+                execute(PrintEachStep);
+
+                if (!PrintEachStep)
+                    display_state();
+
                 break;
             }
+           
+                break;
             case '2':
-                execute();
-                break;
-            case '3':
-                display_state();
-                break;
-            case '4':
                 return;
             default:
                 break;
