@@ -286,10 +286,12 @@ public:
 
     bitset<4> binarydouble(double num) {
         int count = 0;
+        //a while loop to extract the binary of the floating point number
         while (num > .025) {
             num -= .025;
             count += 1;
         }
+        //covers up for the loss of data due to floating pint
         while (count % 10 != 0) {
             count++;
         }
@@ -302,8 +304,8 @@ public:
         int sign1 = (Df[7]) ? -1 : 1;
         string moved1 = Df.to_string();
         int move1 = stoi(moved1.substr(1, 3), nullptr, 2) - 4;
-        bitset<4> four1 = (Df << 4).to_ulong();
         double mantissa1 = 0.0;
+        //calculates the mantissa of the first number
         for (int i = 0; i < 4; i++)
             if (moved1[4 + i] == '1')
                 mantissa1 += pow(2, -(i + 1));
@@ -312,13 +314,15 @@ public:
         int sign2 = (Ds[7]) ? -1 : 1;
         string moved2 = Ds.to_string();
         int move2 = stoi(moved2.substr(1, 3), nullptr, 2) - 4;
-        bitset<4> four2 = (Ds << 4).to_ulong();
         double mantissa2 = 0.0;
+        //the mantissa of the second number
         for (int i = 0; i < 4; i++)
             if (moved2[4 + i] == '1')
                 mantissa2 += pow(2, -(i + 1));
         double value2 = sign2 * mantissa2 * pow(2, move2);
         double result = value1 + value2;
+        //after the last result is calculated 
+        //the number is returned to being a two hexdecimal digits
         string sign3 = "0";
         string final;
         if (result < 0) {
@@ -336,9 +340,10 @@ public:
             final = sign3 + idi.to_string() + res.to_string();
         }
         else {
-            double fraction = result - floor(result);
-            double importnum = result - fraction;
-            bitset<4> res2 = binarydouble(fraction);
+            //splites the number into two 
+            double fraction = result - floor(result);   //the floating fraction 
+            double importnum = result - fraction;       //and the number
+            bitset<4> res2 = binarydouble(fraction);    //turn the fraction into binary using binarydouble function
             bitset<4> res1 = importnum;
             int index = 0;
             int j = 3;
@@ -346,29 +351,29 @@ public:
                 index++;
                 j--;
             }
-            index = -(index - 4);
-            index += 4;
+            index = -(index - 4); 
+            index += 4;                    // to get the exponent
             while (res1[3] != 1)
                 res1 = res1 << 1;
             for (int i = 3; i > 0; i--) {
                 if (res2[3] == 1)
-                    break;
-                res2 = res2 << 1;
+                    break;                    
+                res2 = res2 << 1;            
             }
             int i = 0;
             while (res1[i] != 1) {
                 if (res2[3] == 1) {
-                    res1[i] = 1;
+                    res1[i] = 1;        // putes the two numbers together again but in the mantissa binary form
                 }
                 res2 = res2 << 1;
                 i++;
             }
             bitset<3> idi = index;
-            final = sign3 + idi.to_string() + res1.to_string();
+            final = sign3 + idi.to_string() + res1.to_string(); //final result number
         }
         int finaly = bitset<32>(final).to_ulong();
         stringstream ss;
-        ss << uppercase << hex << finaly;
+        ss << uppercase << hex << finaly;            //finaly returns the number in hexdecimal form
         return ss.str();
     }
 
