@@ -23,7 +23,7 @@ public:
         }
     }
     void load_to_memory(vector <string> Instructions) {
-        int address = 0;
+        int address = 10;
         for (const auto& instr : Instructions) {
             if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
                 store(address, instr);
