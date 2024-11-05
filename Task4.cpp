@@ -22,16 +22,29 @@ public:
                 memory[address + 1] = value.substr(2, 2);
         }
     }
-    void load_to_memory(vector <string> Instructions) {
-        int address = 10;
-        for (const auto& instr : Instructions) {
-            if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
-                store(address, instr);
-                address += 2;
-            }
-        }
+    void load_to_memory(vector<string> Instructions) {
+    int address;
+    
+    cout << "Do you want to enter a starting address? (y/n): ";
+    string choice;
+    cin >> choice;
 
+    if (choice == "y") {
+        cout << "Enter the starting address (integer): ";
+        cin >> address;
+        pc = address;
     }
+    else {
+        address = 10;
+        pc = address;
+    }
+    for (const auto& instr : Instructions) {
+        if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
+            store(address, instr);
+            address += 2;
+        }
+    }
+}
 
     string load(int address) {
         string instruction;
@@ -489,27 +502,34 @@ public:
     void execute(bool PrintEachStep) {
         while (!halted) {
             instruction = memory.load(pc);
-            if (instruction.empty()) {
-                cout << "Error: No instruction at PC = " << pc << endl;
-                break;
+        if (instruction.empty()) {
+            cout << "Error: No instruction at PC = " << pc << endl;
+            break;
             }
             executeInstruction(instruction);
             pc += 2;
-            
-            if (PrintEachStep)
-            {
-                display_state();
-                cout << "Press (x) to move to the next command: ";
-                char key;
-                cin >> key;
-            while (key != 'x') {
-                cout << "Please press (x) to continue: ";
-                cin >> key;
+
+        if (PrintEachStep) {
+            display_state();
+
+            cout << "Press (y) to move to the next command: ";
+            string key;
+            cin >> key;
+        if (key == "n") {
+                cout << "Returning to the main menu..." << endl;
+                break;
+            }
+        while (key != "y") {
+            cout << "invalid input. Press (y) to continue or (n) to exit: ";
+            cin >> key;
+         if (key == "n") {
+                cout << "returning to the main menu" << endl;
+                break; 
                 }
             }
-           
         }
     }
+}
 
     void executeInstruction(const string& instr) {
         char opCode = toupper(instr[0]);
