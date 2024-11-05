@@ -499,6 +499,13 @@ public:
             if (PrintEachStep)
             {
                 display_state();
+                cout << "Press (x) to move to the next command: ";
+                char key;
+                cin >> key;
+            while (key != 'x') {
+                cout << "Please press (x) to continue: ";
+                cin >> key;
+                }
             }
            
         }
