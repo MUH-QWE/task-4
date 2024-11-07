@@ -16,19 +16,18 @@ public:
     Memory(int Size) : memory(Size, "00") {}
 
     void store(int address, const string& value) {
-        if (address >= 0 && address < 256) {
+        if (address >= 0 && address < memory.size()) {
             memory[address] = value.substr(0, 2);
-            if (value.length() == 4)
+            if (value.length() == 4 && (address + 1) < memory.size())
                 memory[address + 1] = value.substr(2, 2);
         }
     }
     void load_to_memory(vector <string> Instructions, int address = 10) {
-        if (Instructions.back() != "c000" || Instructions.back()!= "C000")
-            Instructions.push_back("c000");
+        if (Instructions.back() != "c000" || Instructions.back() != "C000")
+            Instructions.push_back("C000");
         for (const auto& instr : Instructions) {
             if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
-                if (address > 255)
-                    address -= 255;
+                if (address >= memory.size()) address -= static_cast<int>(memory.size());
                 store(address, instr);
                 address += 2;
             }
@@ -38,7 +37,7 @@ public:
 
     string load(int address) {
         string instruction;
-        if (address >= 0 && address < 256) {
+        if (address >= 0 && (address + 1) < memory.size()) {
 
             instruction = memory[address] + memory[address + 1];
             return instruction;
@@ -48,7 +47,7 @@ public:
 
     void display() {
         int counter = 0;
-        for (int i = 0; i < 256; ++i) {
+        for (int i = 0; i < memory.size(); ++i) {
 
             cout << setw(2) << setfill('0') << memory[i] << " ";
             counter++;
@@ -71,18 +70,18 @@ public:
 
     void set(int index, const string& value) {
         if (index >= 0 && index < registers.size()) {
-            registers[index] = value;
+            registers[index] = (value.size() == 2) ? value : "00";
         }
     }
 
-    string get(int index) {
+    string get(int index) const {
         if (index >= 0 && index < registers.size()) {
             return registers[index];
         }
         return "00";
     }
 
-    void display() {
+    void display() const {
         for (const auto& reg : registers) {
             cout << reg << endl;
         }
@@ -139,18 +138,18 @@ public:
             if (!line.empty()) {
 
                 line = ConvertToHexa(line);
-                
+
                 line = Trim(line);
                 line += ' ';
                 while (line.length() >= 4)
                 {
-                    
-                        if(line.substr(0, line.find_first_of(' ')).length()==4)
-                              Instructions.push_back(line.substr(0, line.find_first_of(' ')));
-                    
-                        line = line.erase(0, line.find_first_of(' ') + 1);
-                        line = Trim(line);
-                        line += ' ';
+
+                    if (line.substr(0, line.find_first_of(' ')).length() == 4)
+                        Instructions.push_back(line.substr(0, line.find_first_of(' ')));
+
+                    line = line.erase(0, line.find_first_of(' ') + 1);
+                    line = Trim(line);
+                    line += ' ';
                 }
             }
         }
@@ -367,7 +366,7 @@ public:
             double fraction = result - floor(result);   //the floating fraction 
             double importnum = result - fraction;       //and the number
             bitset<4> res2 = binarydouble(fraction);    //turn the fraction into binary using binarydouble function
-            bitset<4> res1 = importnum;
+            bitset<4> res1 = static_cast<unsigned __int64>(importnum);
             int index = 0;
             int j = 3;
             while (res1[j] != 1) {
@@ -448,25 +447,25 @@ public:
     }
 
     void Jump(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    string address = instr.substr(2, 2);
-    if ((registers.get(r) == registers.get(0)) && (t%2 == 0) ) {
-        pc = stoi(address, nullptr, 16) - 2;
-        return;
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        string address = instr.substr(2, 2);
+        if ((registers.get(r) == registers.get(0)) && (t % 2 == 0)) {
+            pc = stoi(address, nullptr, 16) - 2;
+            return;
+        }
     }
-}
     void Jump_UP(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    string address = instr.substr(2, 2);
-    if ((registers.get(r) > registers.get(0)) && (t % 2 == 0)) {
-        pc = stoi(address, nullptr, 16) - 2;
-        return;
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        string address = instr.substr(2, 2);
+        if ((registers.get(r) > registers.get(0)) && (t % 2 == 0)) {
+            pc = stoi(address, nullptr, 16) - 2;
+            return;
+        }
     }
-}
 };
 
 
@@ -488,7 +487,7 @@ public:
         Instructions(), cu(memory, registers, pc) {}
 
 
-    void load(const vector<string>& program , int address = 10) {
+    void load(const vector<string>& program, int address = 10) {
         for (const auto& line : program) {
             memory.store(address, line);
             address += 2;
@@ -507,12 +506,12 @@ public:
             }
             executeInstruction(instruction);
             pc += 2;
-            
+
             if (PrintEachStep)
-            {   
+            {
                 display_state(print);
             }
-           
+
         }
     }
 
@@ -611,7 +610,7 @@ public:
                 {
                     while (true)
                     {
-                        if (choice != "1" && choice != "2" )
+                        if (choice != "1" && choice != "2")
                         {
                             cout << "Enter a valid choice: ";
                             cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -684,32 +683,32 @@ public:
                     break;
                 }
                 }
-                    //excute the instructions
-                    cout << "do you want to print the state after each excute ? Y/N: ";
-                    string choice2;
-                    bool PrintEachStep = false;
+                //excute the instructions
+                cout << "do you want to print the state after each excute ? Y/N: ";
+                string choice2;
+                bool PrintEachStep = false;
+                cin >> choice2;
+
+                while (choice2 != "Y" && choice2 != "y" && choice2 != "N" && choice2 != "n")
+                {
+                    cout << "enter a valid choice Y/N: ";
                     cin >> choice2;
+                }
 
-                    while (choice2 != "Y" && choice2 != "y" && choice2 != "N" && choice2 != "n")
-                    {
-                        cout << "enter a valid choice Y/N: ";
-                        cin >> choice2;
-                    }
+                if (choice2 == "y" or choice2 == "Y")
+                    PrintEachStep = true;
 
-                    if (choice2 == "y" or choice2 == "Y")
-                        PrintEachStep = true;
+                execute(PrintEachStep, pc);
 
-                    execute(PrintEachStep, pc);
+                if (!PrintEachStep)
+                    display_state(print);
 
-                    if (!PrintEachStep)
-                        display_state(print);
+                print_screan(screan);
 
-                    print_screan(screan);
+                break;
 
-                    break;
-                
             }
-           
+
             case '2':
                 return;
             default:
