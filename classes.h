@@ -8,10 +8,6 @@
 #include <bitset>
 using namespace std;
 
-namespace CPU
-{
-
-
 class Memory {
 private:
     vector<string> memory;
@@ -19,30 +15,51 @@ private:
 public:
     Memory(int Size) : memory(Size, "00") {}
 
-    void store(int address, const string& value) {
-        if (address >= 0 && address < 256) {
+    void store(int & address, const string& value) {
+        if ((address >= 0 && address < 254) || value == "C000")
+        {
             memory[address] = value.substr(0, 2);
-            if (value.length() == 4)
+            if (value.length() == 4)// to skip any error only
                 memory[address + 1] = value.substr(2, 2);
         }
+        else address -= 2;
     }
-    void load_to_memory(vector <string> Instructions, int address = 10) {
-        if (Instructions.back() != "c000" || Instructions.back()!= "C000")
-            Instructions.push_back("c000");
-        for (const auto& instr : Instructions) {
-            if (instr.size() == 4 && all_of(instr.begin(), instr.end(), ::isxdigit)) {
-                if (address > 255)
-                    address -= 255;
-                store(address, instr);
-                address += 2;
+    void load_to_memory(vector <string> Instructions, int start_point = 10) {
+        int address=start_point;
+        
+        for(auto instr : Instructions)
+        {
+            if (instr.length() == 4 && IsAllHexDigits(instr))
+            {
+                store( address, instr);
+                address += 2; // Move to the next address (assuming 2 units per instruction)
+
+                if (instr == "C000")
+                    break;
             }
+
         }
 
     }
+     bool IsAllHexDigits(string instr)
+    {
+        for(char c : instr)
+        {
+            if (!IsHexDigit(c))
+            {
+                return false; // Found a non-hex digit
+            }
+        }
+        return true; // All characters are hex digits
+    }
 
+     bool IsHexDigit(char c)
+     {
+         return std::isxdigit(c); // Check if the character is a valid hex digit
+     }
     string load(int address) {
         string instruction;
-        if (address >= 0 && address < 256) {
+        if (address >= 0 && address < 255) {
 
             instruction = memory[address] + memory[address + 1];
             return instruction;
@@ -50,7 +67,7 @@ public:
         return "0000";
     }
 
-    void display() {
+    void display(bool PrintEachStep) {
         int counter = 0;
         for (int i = 0; i < 256; ++i) {
 
@@ -61,6 +78,14 @@ public:
                 cout << endl;
                 counter = 0;
             }
+           
+            
+             }
+        if (PrintEachStep)
+        {
+            string any_key;
+            cout << "press any key to execute the next instruction .... ";
+            getline(cin, any_key);
 
         }
     }
@@ -98,6 +123,22 @@ private:
     vector<string> Instructions;
 
 public:
+    static bool isValidPath(const std::string& path) {
+        std::ifstream file(path); // Attempt to open the file in input mode
+        return file.good();        // Returns true if the file stream is in a good state, meaning the file exists and is accessible
+    }
+    static string ReadFileName()
+    {
+        string file_path;
+        cout << "file name: ";
+        getline(cin, file_path);
+        while (!isValidPath(file_path))
+        {
+            cout << "enter a valid path: ";
+            getline(cin, file_path);
+        }
+        return file_path;
+    }
     string Trim(string text) {
         if (text.length() == 0)
             return "";
@@ -124,7 +165,7 @@ public:
             if (isdigit(c)) n = c - '0';
             if (isupper(c)) n = c - 'A';
 
-            if (n > 15 || n < 0)
+            if (n > 15 or n < 0)
                 c = ' ';
         }
         return line;
@@ -141,20 +182,20 @@ public:
         Instructions.clear();
         while (getline(file, line)) {
             if (!line.empty()) {
-
+                transform(line.begin(), line.end(), line.begin(), ::toupper);
                 line = ConvertToHexa(line);
-                
+
                 line = Trim(line);
                 line += ' ';
                 while (line.length() >= 4)
                 {
-                    
-                        if(line.substr(0, line.find_first_of(' ')).length()==4)
-                              Instructions.push_back(line.substr(0, line.find_first_of(' ')));
-                    
-                        line = line.erase(0, line.find_first_of(' ') + 1);
-                        line = Trim(line);
-                        line += ' ';
+
+                    if (line.substr(0, line.find_first_of(' ')).length() == 4)
+                        Instructions.push_back(line.substr(0, line.find_first_of(' ')));
+
+                    line = line.erase(0, line.find_first_of(' ') + 1);
+                    line = Trim(line);
+                    line += ' ';
                 }
             }
         }
@@ -211,7 +252,8 @@ public:
         int r = instr[1] - '0';
         string address = instr.substr(2, 2);
         string value = registers.get(r);
-        memory.store(stoi(address, nullptr, 16), value);
+        int addressInt = stoi(address,nullptr, 16);
+        memory.store(addressInt, value);
         if (address == "00")
             return value;
         else
@@ -452,25 +494,25 @@ public:
     }
 
     void Jump(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    string address = instr.substr(2, 2);
-    if ((registers.get(r) == registers.get(0)) && (t%2 == 0) ) {
-        pc = stoi(address, nullptr, 16) - 2;
-        return;
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        string address = instr.substr(2, 2);
+        if ((registers.get(r) == registers.get(0)) && (t % 2 == 0)) {
+            pc = stoi(address, nullptr, 16) - 2;
+            return;
+        }
     }
-}
     void Jump_UP(const string& instr) {
-    int r = instr[1] - '0';
-    int s = instr[2] - '0';
-    int t = instr[3] - '0';
-    string address = instr.substr(2, 2);
-    if ((registers.get(r) > registers.get(0)) && (t % 2 == 0)) {
-        pc = stoi(address, nullptr, 16) - 2;
-        return;
+        int r = instr[1] - '0';
+        int s = instr[2] - '0';
+        int t = instr[3] - '0';
+        string address = instr.substr(2, 2);
+        if ((registers.get(r) > registers.get(0)) && (t % 2 == 0)) {
+            pc = stoi(address, nullptr, 16) - 2;
+            return;
+        }
     }
-}
 };
 
 
@@ -492,31 +534,30 @@ public:
         Instructions(), cu(memory, registers, pc) {}
 
 
-    void load(const vector<string>& program , int address = 10) {
+    void load(const vector<string>& program, int address = 10) {
         for (const auto& line : program) {
             memory.store(address, line);
             address += 2;
         }
     }
 
-    void execute(bool PrintEachStep, int count = 10) {
-        pc = count;
-        if (pc > 255)
-            pc -= 255;
+    void execute(bool PrintEachStep,int start_point) {
+       
+        pc = start_point;
         while (!halted) {
             instruction = memory.load(pc);
-            if (instruction.empty()) {
-                cout << "Error: No instruction at PC = " << pc << endl;
+            if (instruction.empty())
+            {
                 break;
             }
             executeInstruction(instruction);
             pc += 2;
-            
+
             if (PrintEachStep)
-            {   
-                display_state(print);
+            {
+                display_state(print,PrintEachStep);
             }
-           
+
         }
     }
 
@@ -570,7 +611,7 @@ public:
     }
 
 
-    void display_state(string print) {
+    void display_state(string print, bool PrintEachStep) {
         cout << "Registers:" << endl;
         registers.display();
         cout << "PC: " << pc << endl;
@@ -578,7 +619,7 @@ public:
         cout << "to screan [output]: " << print << endl;
         print.clear();
         cout << "Memory:" << endl;
-        memory.display();
+        memory.display(PrintEachStep);
     }
     void print_screan(vector <string> screeen) {
         cout << "screan out put" << endl;
@@ -596,7 +637,11 @@ public:
         cout << endl;
         cout << "===========================================================================================" << endl;;
     }
+    bool isNumber(const string& str) {
+        return !str.empty() && all_of(str.begin(), str.end(), ::isdigit);
+    }
     void run() {
+        string start_point="10";
         while (true) {
             halted = false;
             cout << "Menu:" << endl;
@@ -605,7 +650,7 @@ public:
             cout << "Choose: ";
             string choice = "";
 
-            cin >> choice;
+            getline(cin,choice);
 
 
             while (true)
@@ -615,11 +660,11 @@ public:
                 {
                     while (true)
                     {
-                        if (choice != "1" && choice != "2" )
+                        if (choice != "1" && choice != "2")
                         {
                             cout << "Enter a valid choice: ";
-                            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                            cin >> choice;
+                            //cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            getline(cin,choice);
                         }
                         else break;
                     }
@@ -635,12 +680,12 @@ public:
             char c = choice[0];
             switch (c) {
             case '1': {
-                char B;
+                string B;
                 cout << "what would you prefer:" << endl;
                 cout << "1- load at base location in memory (10)" << endl;
                 cout << "2- spicify start point" << endl;
                 cout << "choise: ";
-                cin >> B;
+                getline(cin, B);
                 while (true)
                 {
 
@@ -648,11 +693,11 @@ public:
                     {
                         while (true)
                         {
-                            if (B != '1' && B != '2')
+                            if (B != "1" && B != "2")
                             {
                                 cout << "Enter a valid choice: ";
-                                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                                cin >> B;
+                                //cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                                getline(cin,B);
                             }
                             else break;
                         }
@@ -664,56 +709,59 @@ public:
                     }
                     break;
                 }
-                switch (B) {
-                case '1': {
-                    string file_path;
-                    cout << "file name: ";
-                    cin >> file_path;
-                    memory.load_to_memory(Instructions.loadFromFile(file_path));
+                switch (stoi(B)) {
+                case 1: {
+                    
+                    memory.load_to_memory(Instructions.loadFromFile(Loader::ReadFileName()));
                     break;
                 }
-                case '2': {
+                case 2: {
                     while (true) {
+                        
                         cout << "enter start point:";
-                        cin >> pc;
-                        if (!(pc <= 0 || pc > 255))
+                        getline(cin, start_point);
+
+                        while (!isNumber(start_point))
+                        {
+                            cout << "enter a valid number: ";
+                            getline(cin, start_point);
+                        }
+                       
+                        if (stoi(start_point)>=0 && stoi(start_point)<254 && stoi(start_point)%2==0)
                             break;
                         else
-                            cout << endl << "invalid memory location please ";
+                            cout << endl << "invalid memory location,enter a valid start point please\n ";
                     }
-                    string file_path;
-                    cout << "file name: ";
-                    cin >> file_path;
-                    memory.load_to_memory(Instructions.loadFromFile(file_path), pc);
+                    memory.load_to_memory(Instructions.loadFromFile(Loader::ReadFileName()), stoi(start_point));
                     break;
                 }
                 }
-                    //excute the instructions
-                    cout << "do you want to print the state after each excute ? Y/N: ";
-                    string choice2;
-                    bool PrintEachStep = false;
-                    cin >> choice2;
+                //excute the instructions
+                cout << "do you want to print the state after each excute ? Y/N: ";
+                string choice2;
+                bool PrintEachStep = false;
+                getline(cin,choice2);
 
-                    while (choice2 != "Y" && choice2 != "y" && choice2 != "N" && choice2 != "n")
-                    {
-                        cout << "enter a valid choice Y/N: ";
-                        cin >> choice2;
-                    }
+                while (choice2 != "Y" && choice2 != "y" && choice2 != "N" && choice2 != "n")
+                {
+                    cout << "enter a valid choice Y/N: ";
+                    getline(cin, choice2);
+                }
 
-                    if (choice2 == "y" || choice2 == "Y")
-                        PrintEachStep = true;
+                if (choice2 == "y" || choice2 == "Y")
+                    PrintEachStep = true;
 
-                    execute(PrintEachStep, pc);
+                execute(PrintEachStep, stoi(start_point));
 
-                    if (!PrintEachStep)
-                        display_state(print);
+                if (!PrintEachStep)
+                    display_state(print,PrintEachStep);
 
-                    print_screan(screan);
+                print_screan(screan);
 
-                    break;
-                
+                break;
+
             }
-           
+
             case '2':
                 return;
             default:
@@ -722,4 +770,4 @@ public:
         }
     }
 };
-}
+
