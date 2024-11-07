@@ -448,21 +448,25 @@ public:
     }
 
     void Jump(const string& instr) {
-        int r = instr[1] - '0';
-        string address = instr.substr(2, 2);
-        if (registers.get(r) == registers.get(0)) {
-            pc = stoi(address, nullptr, 16) - 2;
-            return;
-        }
+    int r = instr[1] - '0';
+    int s = instr[2] - '0';
+    int t = instr[3] - '0';
+    string address = instr.substr(2, 2);
+    if ((registers.get(r) == registers.get(0)) && (t%2 == 0) ) {
+        pc = stoi(address, nullptr, 16) - 2;
+        return;
     }
+}
     void Jump_UP(const string& instr) {
-        int r = instr[1] - '0';
-        string address = instr.substr(2, 2);
-        if (registers.get(r) > registers.get(0)) {
-            pc = stoi(address, nullptr, 16) - 2;
-            return;
-        }
+    int r = instr[1] - '0';
+    int s = instr[2] - '0';
+    int t = instr[3] - '0';
+    string address = instr.substr(2, 2);
+    if ((registers.get(r) > registers.get(0)) && (t % 2 == 0)) {
+        pc = stoi(address, nullptr, 16) - 2;
+        return;
     }
+}
 };
 
 
